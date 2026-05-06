@@ -1,5 +1,6 @@
-import { useReducer, useEffect, useState } from 'react'
+import { useReducer, useEffect, useState, useRef } from 'react'
 import { calcTotalPoints } from './utils/scoring'
+import { hasSupabase, saveRoundRemote, loadRoundRemote, subscribeToRound, unsubscribeFromRound } from './lib/supabase'
 import BottomNav from './components/BottomNav'
 import Scoreboard from './components/Scoreboard'
 import Matches from './components/Matches'
@@ -7,6 +8,7 @@ import Setup from './components/Setup'
 import Settings from './components/Settings'
 
 const LS_KEY = 'bromsgrove-cup-v1'
+const ROUND_ID = 'BROMSGROVE2025'
 export const POINTS_TO_WIN = 41
 export const TOTAL_POINTS = 81
 
@@ -130,6 +132,11 @@ function reducer(state, action) {
     case 'RESET_ALL': {
       return DEFAULT_STATE
     }
+    case 'LOAD_STATE': {
+      // Merge incoming remote state over defaults; strips any extra fields (e.g. id)
+      const { id: _id, ...clean } = action.state
+      return { ...DEFAULT_STATE, ...clean }
+    }
     default:
       return state
   }
@@ -154,10 +161,59 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, null, loadState)
   const [tab, setTab] = useState('scoreboard')
   const [confirm, setConfirm] = useState(null)
+  const [syncStatus, setSyncStatus] = useState(hasSupabase ? 'syncing' : 'local')
 
+  // skipSaveRef: set to true before applying a remote update so the
+  // persistence effect doesn't echo it straight back to Supabase.
+  const skipSaveRef = useRef(false)
+  const debounceRef = useRef(null)
+
+  // Persist to localStorage on every change; also debounce-save to Supabase.
   useEffect(() => {
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch {}
+
+    if (!hasSupabase) return
+
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false
+      clearTimeout(debounceRef.current)
+      return
+    }
+
+    setSyncStatus('syncing')
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      const { error } = await saveRoundRemote({ ...state, id: ROUND_ID }, 'no-pin')
+      setSyncStatus(error ? 'error' : 'live')
+    }, 750)
   }, [state])
+
+  // On mount: load remote state if available, then subscribe to live updates.
+  useEffect(() => {
+    if (!hasSupabase) return
+    let channel = null
+
+    ;(async () => {
+      const { data } = await loadRoundRemote(ROUND_ID)
+      if (data?.round) {
+        skipSaveRef.current = true
+        dispatch({ type: 'LOAD_STATE', state: data.round })
+      }
+      setSyncStatus('live')
+
+      channel = subscribeToRound(ROUND_ID, (incoming) => {
+        clearTimeout(debounceRef.current)
+        skipSaveRef.current = true
+        dispatch({ type: 'LOAD_STATE', state: incoming })
+        setSyncStatus('live')
+      })
+    })()
+
+    return () => {
+      unsubscribeFromRound(channel)
+      clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   function showConfirm(msg, onOk) {
     setConfirm({ msg, onOk })
@@ -192,11 +248,21 @@ export default function App() {
           <Setup state={state} dispatch={dispatch} />
         )}
         {tab === 'settings' && (
-          <Settings dispatch={dispatch} confirm={showConfirm} />
+          <Settings dispatch={dispatch} confirm={showConfirm} syncStatus={syncStatus} />
         )}
       </div>
 
       <BottomNav tab={tab} setTab={setTab} ptsA={ptsA} ptsB={ptsB} />
+
+      {/* Non-intrusive sync status pill — only renders when Supabase is configured */}
+      {hasSupabase && (
+        <div className="fixed top-2 right-2 z-50 text-[10px] font-bold px-2 py-1 rounded-full bg-gray-900/90 border border-gray-800 backdrop-blur-sm pointer-events-none">
+          {syncStatus === 'live'    && <span className="text-green-400">● Live</span>}
+          {syncStatus === 'syncing' && <span className="text-yellow-400">● Syncing</span>}
+          {syncStatus === 'error'   && <span className="text-red-400">● Sync error</span>}
+          {syncStatus === 'local'   && <span className="text-gray-500">● Local</span>}
+        </div>
+      )}
 
       {confirm && (
         <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-50 p-4">
