@@ -9,6 +9,13 @@ export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
 
 export const hasSupabase = !!supabase
 
+// Startup diagnostic — visible in browser DevTools console
+console.log('[Supabase] init', {
+  url: SUPABASE_URL ? SUPABASE_URL : 'NOT SET',
+  keyPresent: !!SUPABASE_ANON_KEY,
+  clientCreated: hasSupabase,
+})
+
 // Save or update a round in Supabase
 export async function saveRoundRemote(round, adminPinHash) {
   if (!supabase) return { error: 'Supabase not configured' }
@@ -35,8 +42,9 @@ export async function loadRoundRemote(code) {
   return { data: { round: data.data, adminPinHash: data.admin_pin_hash }, error: null }
 }
 
-// Subscribe to live updates for a round
-export function subscribeToRound(code, onUpdate) {
+// Subscribe to live updates for a round.
+// onError(err) is called if the subscription itself fails.
+export function subscribeToRound(code, onUpdate, onError) {
   if (!supabase) return null
   const channel = supabase
     .channel(`round-${code}`)
@@ -47,7 +55,12 @@ export function subscribeToRound(code, onUpdate) {
         if (payload.new?.data) onUpdate(payload.new.data)
       }
     )
-    .subscribe()
+    .subscribe((status, err) => {
+      if (err) {
+        console.error('[Supabase] realtime subscribe error:', err)
+        if (onError) onError(err)
+      }
+    })
   return channel
 }
 

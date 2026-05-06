@@ -162,11 +162,18 @@ export default function App() {
   const [tab, setTab] = useState('scoreboard')
   const [confirm, setConfirm] = useState(null)
   const [syncStatus, setSyncStatus] = useState(hasSupabase ? 'syncing' : 'local')
+  const [syncError, setSyncError] = useState('')
 
   // skipSaveRef: set to true before applying a remote update so the
   // persistence effect doesn't echo it straight back to Supabase.
   const skipSaveRef = useRef(false)
   const debounceRef = useRef(null)
+
+  function errMsg(e) {
+    if (!e) return ''
+    if (typeof e === 'string') return e
+    return e.message || e.details || String(e)
+  }
 
   // Persist to localStorage on every change; also debounce-save to Supabase.
   useEffect(() => {
@@ -184,7 +191,14 @@ export default function App() {
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       const { error } = await saveRoundRemote({ ...state, id: ROUND_ID }, 'no-pin')
-      setSyncStatus(error ? 'error' : 'live')
+      if (error) {
+        console.error('[Supabase] saveRoundRemote error:', error)
+        setSyncError(errMsg(error))
+        setSyncStatus('error')
+      } else {
+        setSyncError('')
+        setSyncStatus('live')
+      }
     }, 750)
   }, [state])
 
@@ -194,19 +208,35 @@ export default function App() {
     let channel = null
 
     ;(async () => {
-      const { data } = await loadRoundRemote(ROUND_ID)
+      const { data, error: loadErr } = await loadRoundRemote(ROUND_ID)
+      // PGRST116 = no rows found = normal on first use, not a real error
+      if (loadErr && loadErr.code !== 'PGRST116') {
+        console.error('[Supabase] loadRoundRemote error:', loadErr)
+        setSyncError(errMsg(loadErr))
+        setSyncStatus('error')
+        return
+      }
       if (data?.round) {
         skipSaveRef.current = true
         dispatch({ type: 'LOAD_STATE', state: data.round })
       }
+      setSyncError('')
       setSyncStatus('live')
 
-      channel = subscribeToRound(ROUND_ID, (incoming) => {
-        clearTimeout(debounceRef.current)
-        skipSaveRef.current = true
-        dispatch({ type: 'LOAD_STATE', state: incoming })
-        setSyncStatus('live')
-      })
+      channel = subscribeToRound(
+        ROUND_ID,
+        (incoming) => {
+          clearTimeout(debounceRef.current)
+          skipSaveRef.current = true
+          dispatch({ type: 'LOAD_STATE', state: incoming })
+          setSyncStatus('live')
+        },
+        (subErr) => {
+          console.error('[Supabase] subscription error:', subErr)
+          setSyncError(errMsg(subErr))
+          setSyncStatus('error')
+        },
+      )
     })()
 
     return () => {
@@ -256,10 +286,10 @@ export default function App() {
 
       {/* Non-intrusive sync status pill — only renders when Supabase is configured */}
       {hasSupabase && (
-        <div className="fixed top-2 right-2 z-50 text-[10px] font-bold px-2 py-1 rounded-full bg-gray-900/90 border border-gray-800 backdrop-blur-sm pointer-events-none">
+        <div className="fixed top-2 right-2 z-50 text-[10px] font-bold px-2 py-1 rounded-full bg-gray-900/90 border border-gray-800 backdrop-blur-sm pointer-events-none max-w-[200px] truncate">
           {syncStatus === 'live'    && <span className="text-green-400">● Live</span>}
           {syncStatus === 'syncing' && <span className="text-yellow-400">● Syncing</span>}
-          {syncStatus === 'error'   && <span className="text-red-400">● Sync error</span>}
+          {syncStatus === 'error'   && <span className="text-red-400">● Sync error{syncError ? `: ${syncError}` : ''}</span>}
           {syncStatus === 'local'   && <span className="text-gray-500">● Local</span>}
         </div>
       )}
