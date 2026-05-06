@@ -1,359 +1,350 @@
-import {
-  calcMatchPlayStatus, calcMatchHoleByHoleScore,
-  calcRyderCupTotals, ryderStatusMsg, fmtPts,
-} from '../utils/scoring'
+import { useState, useRef } from 'react'
+import { calcHoleWinner, calcTotalPoints, fmtPts } from '../utils/scoring'
 
-const TEAM_COLOR_BG = {
-  blue:   'bg-blue-600',  red:    'bg-red-600',
-  green:  'bg-green-600', amber:  'bg-amber-500',
-  purple: 'bg-purple-600',
-}
-const TEAM_COLOR_TEXT = {
-  blue: 'text-blue-300', red: 'text-red-300', green: 'text-green-300',
-  amber: 'text-amber-300', purple: 'text-purple-300',
-}
-const TEAM_COLOR_BORDER = {
-  blue: 'border-blue-700', red: 'border-red-700', green: 'border-green-700',
-  amber: 'border-amber-700', purple: 'border-purple-700',
-}
+const POINTS_TO_WIN = 41
 
-const RESULT_OPTS = [
-  { value: 'teamAWin', label: 'Win',    aLabel: true },
-  { value: 'teamBWin', label: 'Win',    bLabel: true },
-  { value: 'halved',   label: 'Halved', both: true },
-  { value: null,       label: 'Not played' },
-]
-
-// ─── Ryder Cup match card (matchResult mode) ──────────────────────────────────
-
-function RyderMatchCard({ match, players, teams, dispatch }) {
-  const teamA = teams[0]
-  const teamB = teams[1]
-  const aNames = match.teamAPlayerIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean)
-  const bNames = match.teamBPlayerIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean)
-  const result = match.result
-
-  const borderColor = result === 'teamAWin' ? (TEAM_COLOR_BORDER[teamA?.color] || 'border-blue-700')
-    : result === 'teamBWin' ? (TEAM_COLOR_BORDER[teamB?.color] || 'border-red-700')
-    : result === 'halved' ? 'border-amber-700'
-    : 'border-gray-700'
-
-  const bgColor = result === 'teamAWin' ? 'bg-blue-950/40'
-    : result === 'teamBWin' ? 'bg-red-950/40'
-    : result === 'halved' ? 'bg-amber-950/30'
-    : 'bg-gray-900/40'
-
-  function setResult(val) {
-    dispatch({ type: 'SET_MATCH_RESULT', id: match.id, result: val })
-  }
-
-  return (
-    <div className={`rounded-2xl border-2 ${borderColor} ${bgColor} p-4 mb-3 transition-all duration-200`}>
-      {/* Match header */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <span className="text-xs font-black uppercase tracking-widest text-gray-500">{match.name}</span>
-          <span className="ml-2 text-[10px] bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase">{match.type}</span>
-        </div>
-        {match.holeRange && (
-          <span className="text-[10px] text-gray-600 font-semibold">H{match.holeRange[0]}–{match.holeRange[1]}</span>
-        )}
-      </div>
-
-      {/* Players */}
-      <div className="flex items-stretch gap-2 mb-4">
-        <div className={`flex-1 rounded-xl p-3 text-center transition-all ${result === 'teamAWin' ? 'bg-blue-700/40 ring-2 ring-blue-500/30' : result === 'halved' ? 'bg-blue-900/20' : 'bg-gray-800/40'}`}>
-          <div className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${TEAM_COLOR_TEXT[teamA?.color] || 'text-blue-300'}`}>
-            {teamA?.name || 'Team A'}
-          </div>
-          <div className="text-sm font-bold text-white leading-snug">{aNames.join(' & ') || '—'}</div>
-          {result === 'teamAWin' && <div className="text-xs text-green-400 mt-1.5 font-bold">✓ Win</div>}
-          {result === 'halved' && <div className="text-xs text-amber-400 mt-1.5 font-bold">½</div>}
-        </div>
-        <div className="flex items-center text-gray-600 font-black text-xs">VS</div>
-        <div className={`flex-1 rounded-xl p-3 text-center transition-all ${result === 'teamBWin' ? 'bg-red-700/40 ring-2 ring-red-500/30' : result === 'halved' ? 'bg-red-900/20' : 'bg-gray-800/40'}`}>
-          <div className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${TEAM_COLOR_TEXT[teamB?.color] || 'text-red-300'}`}>
-            {teamB?.name || 'Team B'}
-          </div>
-          <div className="text-sm font-bold text-white leading-snug">{bNames.join(' & ') || '—'}</div>
-          {result === 'teamBWin' && <div className="text-xs text-green-400 mt-1.5 font-bold">✓ Win</div>}
-          {result === 'halved' && <div className="text-xs text-amber-400 mt-1.5 font-bold">½</div>}
-        </div>
-      </div>
-
-      {/* Result buttons */}
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setResult(result === 'teamAWin' ? null : 'teamAWin')}
-          className={`py-3 px-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-95 ${
-            result === 'teamAWin'
-              ? `${TEAM_COLOR_BG[teamA?.color] || 'bg-blue-600'} border-transparent text-white ring-2 ring-white/20`
-              : 'bg-gray-800/50 border-gray-700 text-gray-400'
-          }`}
-        >
-          {teamA?.name || 'Team A'} Win
-        </button>
-        <button
-          onClick={() => setResult(result === 'teamBWin' ? null : 'teamBWin')}
-          className={`py-3 px-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-95 ${
-            result === 'teamBWin'
-              ? `${TEAM_COLOR_BG[teamB?.color] || 'bg-red-600'} border-transparent text-white ring-2 ring-white/20`
-              : 'bg-gray-800/50 border-gray-700 text-gray-400'
-          }`}
-        >
-          {teamB?.name || 'Team B'} Win
-        </button>
-        <button
-          onClick={() => setResult(result === 'halved' ? null : 'halved')}
-          className={`py-3 px-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-95 ${
-            result === 'halved'
-              ? 'bg-amber-500 border-transparent text-white ring-2 ring-white/20'
-              : 'bg-gray-800/50 border-gray-700 text-gray-400'
-          }`}
-        >
-          Halved
-        </button>
-        <button
-          onClick={() => setResult(null)}
-          className={`py-3 px-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition-all active:scale-95 ${
-            result === null
-              ? 'bg-gray-600 border-gray-500 text-white'
-              : 'bg-gray-800/50 border-gray-700 text-gray-400'
-          }`}
-        >
-          Not Played
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Ryder Cup match card (holeByHole mode) ───────────────────────────────────
-
-function RyderMatchCardHoleByHole({ match, players, teams, holes, scores }) {
-  const teamA = teams[0]
-  const teamB = teams[1]
-  const aNames = match.teamAPlayerIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean)
-  const bNames = match.teamBPlayerIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean)
-
-  const { aPoints, bPoints, totalHoles, playedHoles } = calcMatchHoleByHoleScore(match, holes, scores)
-
-  const leading = aPoints > bPoints ? 'a' : bPoints > aPoints ? 'b' : null
-  const borderColor = leading === 'a' ? (TEAM_COLOR_BORDER[teamA?.color] || 'border-blue-700')
-    : leading === 'b' ? (TEAM_COLOR_BORDER[teamB?.color] || 'border-red-700')
-    : 'border-gray-700'
-
-  return (
-    <div className={`rounded-2xl border-2 ${borderColor} bg-gray-900/40 p-4 mb-3`}>
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <span className="text-xs font-black uppercase tracking-widest text-gray-500">{match.name}</span>
-          <span className="ml-2 text-[10px] bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase">{match.type}</span>
-        </div>
-        <span className="text-[10px] text-gray-600 font-semibold">
-          {playedHoles}/{totalHoles} holes
-        </span>
-      </div>
-
-      <div className="flex items-stretch gap-2">
-        <div className={`flex-1 rounded-xl p-3 text-center ${leading === 'a' ? 'bg-blue-900/30 ring-2 ring-blue-600/20' : 'bg-gray-800/40'}`}>
-          <div className={`text-[9px] font-black uppercase tracking-widest mb-1 ${TEAM_COLOR_TEXT[teamA?.color] || 'text-blue-300'}`}>
-            {teamA?.name || 'Team A'}
-          </div>
-          <div className="text-sm font-bold text-white leading-snug mb-1">{aNames.join(' & ') || '—'}</div>
-          <div className={`text-3xl font-black ${leading === 'a' ? 'text-blue-200' : 'text-gray-400'}`}>{fmtPts(aPoints)}</div>
-          <div className="text-[10px] text-gray-600 mt-0.5">pts</div>
-        </div>
-        <div className="flex items-center text-gray-600 font-black text-xs">VS</div>
-        <div className={`flex-1 rounded-xl p-3 text-center ${leading === 'b' ? 'bg-red-900/30 ring-2 ring-red-600/20' : 'bg-gray-800/40'}`}>
-          <div className={`text-[9px] font-black uppercase tracking-widest mb-1 ${TEAM_COLOR_TEXT[teamB?.color] || 'text-red-300'}`}>
-            {teamB?.name || 'Team B'}
-          </div>
-          <div className="text-sm font-bold text-white leading-snug mb-1">{bNames.join(' & ') || '—'}</div>
-          <div className={`text-3xl font-black ${leading === 'b' ? 'text-red-200' : 'text-gray-400'}`}>{fmtPts(bPoints)}</div>
-          <div className="text-[10px] text-gray-600 mt-0.5">pts</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Match Play card (computed from scores) ───────────────────────────────────
-
-function MatchPlayCard({ match, players, teams, holes, scores }) {
-  const teamA = teams[0]
-  const teamB = teams[1]
-  const aNames = match.teamAPlayerIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean)
-  const bNames = match.teamBPlayerIds.map(id => players.find(p => p.id === id)?.name).filter(Boolean)
-
-  const status = calcMatchPlayStatus(match, holes, scores)
-  const { winner, leadingSide } = status
-
-  const borderColor = winner === 'a' ? 'border-blue-600' : winner === 'b' ? 'border-red-600' : 'border-gray-700'
-
-  return (
-    <div className={`rounded-2xl border-2 ${borderColor} bg-gray-900/40 p-4 mb-3`}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-black uppercase tracking-widest text-gray-500">{match.name}</span>
-        <span className="text-[10px] text-gray-600 font-semibold">
-          {status.holesPlayed}/{(match.holeRange ? match.holeRange[1] - match.holeRange[0] + 1 : holes.length)} holes
-        </span>
-      </div>
-
-      <div className="flex items-stretch gap-2 mb-3">
-        <div className={`flex-1 rounded-xl p-3 text-center ${winner === 'a' ? 'bg-blue-900/30 ring-2 ring-blue-600/20' : 'bg-gray-800/40'}`}>
-          <div className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">{teamA?.name || 'Side A'}</div>
-          <div className="text-sm font-bold text-white leading-snug">{aNames.join(' & ') || '—'}</div>
-          {winner === 'a' && <div className="text-xs text-green-400 mt-1.5 font-bold">✓ Winner</div>}
-        </div>
-        <div className="flex items-center text-gray-600 font-black text-xs">VS</div>
-        <div className={`flex-1 rounded-xl p-3 text-center ${winner === 'b' ? 'bg-red-900/30 ring-2 ring-red-600/20' : 'bg-gray-800/40'}`}>
-          <div className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-1">{teamB?.name || 'Side B'}</div>
-          <div className="text-sm font-bold text-white leading-snug">{bNames.join(' & ') || '—'}</div>
-          {winner === 'b' && <div className="text-xs text-green-400 mt-1.5 font-bold">✓ Winner</div>}
-        </div>
-      </div>
-
-      <div className="text-center">
-        <span className={`font-bold text-sm ${
-          winner ? 'text-green-400'
-          : leadingSide ? 'text-yellow-300'
-          : 'text-gray-400'
-        }`}>
-          {status.statusText}
-        </span>
-        {leadingSide && !winner && (
-          <span className="text-gray-600 text-xs ml-1">
-            ({leadingSide === 'a' ? aNames[0] || teamA?.name : bNames[0] || teamB?.name} leading)
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ─── Main Matches Component ───────────────────────────────────────────────────
-
-export default function Matches({ round, dispatch, setTab }) {
-  const { matches, teams, players, holes, scores, format, ryderCupSettings } = round
-  const teamA = teams[0]
-  const teamB = teams[1]
-  const isRyderCup = format === 'ryderCup'
-  const scoringMethod = ryderCupSettings?.scoringMethod || 'matchResult'
-
-  // Group matches by section
-  const sections = {}
+function getHoleAggregate(holeNum, matches, scores) {
+  let a = 0, b = 0, played = 0
   for (const m of matches) {
-    const key = m.section || 'Matches'
-    if (!sections[key]) sections[key] = []
-    sections[key].push(m)
+    if (holeNum < m.holeRange[0] || holeNum > m.holeRange[1]) continue
+    const w = calcHoleWinner(holeNum, m, scores)
+    if (w === 'a') { a++; played++ }
+    else if (w === 'b') { b++; played++ }
+    else if (w === 'halved') { a += 0.5; b += 0.5; played++ }
+  }
+  return { a, b, played }
+}
+
+function HoleResultPill({ winner, teamAName, teamBName }) {
+  if (winner === null) return <span className="text-[10px] text-gray-600 font-semibold">Incomplete</span>
+  if (winner === 'halved') return (
+    <span className="text-[10px] bg-gray-700/80 text-gray-300 px-2 py-0.5 rounded-full font-bold">
+      Halved · ½pt each
+    </span>
+  )
+  if (winner === 'a') return (
+    <span className="text-[10px] bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded-full font-bold border border-blue-800/50">
+      {teamAName} +1
+    </span>
+  )
+  return (
+    <span className="text-[10px] bg-red-900/60 text-red-300 px-2 py-0.5 rounded-full font-bold border border-red-800/50">
+      {teamBName} +1
+    </span>
+  )
+}
+
+function PlayerScoreRow({ playerId, playerName, holeNumber, holePar, scores, dispatch, color, highlight }) {
+  const gross = scores[playerId]?.[holeNumber]?.gross ?? null
+
+  function adjust(delta) {
+    const newGross = gross != null ? Math.max(1, gross + delta) : holePar
+    dispatch({ type: 'SET_SCORE', playerId, holeNumber, gross: Math.max(1, newGross) })
   }
 
-  // Ryder Cup team summary
-  let ryderTotals = null
-  if (isRyderCup) {
-    ryderTotals = calcRyderCupTotals(matches, holes, scores, scoringMethod)
+  function clear() {
+    dispatch({ type: 'CLEAR_SCORE', playerId, holeNumber })
+  }
+
+  const scoreColor = color === 'blue'
+    ? (highlight ? 'text-blue-200' : 'text-blue-400')
+    : (highlight ? 'text-red-200' : 'text-red-400')
+
+  return (
+    <div className={`flex items-center gap-2 py-2 ${highlight ? 'opacity-100' : 'opacity-75'}`}>
+      <span className={`flex-1 text-sm min-w-0 truncate ${highlight ? 'text-white font-bold' : 'text-gray-400 font-semibold'}`}>
+        {playerName}
+        {highlight && gross != null && <span className="ml-1 text-[9px] text-green-400 font-black">★</span>}
+      </span>
+      <button
+        onClick={() => adjust(-1)}
+        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-xl font-bold flex items-center justify-center active:scale-90 shrink-0"
+      >
+        −
+      </button>
+      <div className="w-10 text-center shrink-0">
+        {gross != null ? (
+          <button onClick={clear} className={`text-2xl font-black ${scoreColor} active:opacity-60`} title="Tap to clear">
+            {gross}
+          </button>
+        ) : (
+          <span className="text-2xl font-black text-gray-700">—</span>
+        )}
+      </div>
+      <button
+        onClick={() => adjust(+1)}
+        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-xl font-bold flex items-center justify-center active:scale-90 shrink-0"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
+function FourballPanel({ match, holeNumber, holePar, state, dispatch, teamA, teamB }) {
+  const winner = calcHoleWinner(holeNumber, match, state.scores)
+  const getPlayerName = id => state.players.find(p => p.id === id)?.name ?? id
+
+  const aScores = match.teamAPlayerIds.map(id => state.scores[id]?.[holeNumber]?.gross).filter(v => v != null)
+  const bScores = match.teamBPlayerIds.map(id => state.scores[id]?.[holeNumber]?.gross).filter(v => v != null)
+  const aBest = aScores.length ? Math.min(...aScores) : null
+  const bBest = bScores.length ? Math.min(...bScores) : null
+
+  const borderClass =
+    winner === 'a' ? 'border-blue-700/60' :
+    winner === 'b' ? 'border-red-700/60' :
+    winner === 'halved' ? 'border-gray-600/60' :
+    'border-gray-800'
+
+  return (
+    <div className={`rounded-2xl border overflow-hidden ${borderClass}`}>
+      <div className="px-3 py-2 bg-gray-800/60 flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{match.name}</span>
+        <HoleResultPill winner={winner} teamAName={teamA.name} teamBName={teamB.name} />
+      </div>
+
+      {/* Team A */}
+      <div className="px-3 pt-2 pb-1 bg-blue-950/25">
+        <div className="flex justify-between items-center mb-0.5">
+          <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">{teamA.name}</span>
+          {aBest != null && (
+            <span className="text-[10px] text-blue-400 font-semibold">Best ball: {aBest}</span>
+          )}
+        </div>
+        {match.teamAPlayerIds.map(id => (
+          <PlayerScoreRow
+            key={id}
+            playerId={id}
+            playerName={getPlayerName(id)}
+            holeNumber={holeNumber}
+            holePar={holePar}
+            scores={state.scores}
+            dispatch={dispatch}
+            color="blue"
+            highlight={aBest != null && state.scores[id]?.[holeNumber]?.gross === aBest}
+          />
+        ))}
+      </div>
+
+      <div className="h-px bg-gray-800" />
+
+      {/* Team B */}
+      <div className="px-3 pt-2 pb-2 bg-red-950/25">
+        <div className="flex justify-between items-center mb-0.5">
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-500">{teamB.name}</span>
+          {bBest != null && (
+            <span className="text-[10px] text-red-400 font-semibold">Best ball: {bBest}</span>
+          )}
+        </div>
+        {match.teamBPlayerIds.map(id => (
+          <PlayerScoreRow
+            key={id}
+            playerId={id}
+            playerName={getPlayerName(id)}
+            holeNumber={holeNumber}
+            holePar={holePar}
+            scores={state.scores}
+            dispatch={dispatch}
+            color="red"
+            highlight={bBest != null && state.scores[id]?.[holeNumber]?.gross === bBest}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SinglesPanel({ match, holeNumber, holePar, state, dispatch, teamA, teamB }) {
+  const winner = calcHoleWinner(holeNumber, match, state.scores)
+  const getPlayerName = id => state.players.find(p => p.id === id)?.name ?? id
+  const aId = match.teamAPlayerIds[0]
+  const bId = match.teamBPlayerIds[0]
+
+  const borderClass =
+    winner === 'a' ? 'border-blue-700/60' :
+    winner === 'b' ? 'border-red-700/60' :
+    winner === 'halved' ? 'border-gray-600/60' :
+    'border-gray-800'
+
+  return (
+    <div className={`rounded-xl border overflow-hidden ${borderClass}`}>
+      <div className="px-3 py-1.5 bg-gray-800/60 flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{match.name}</span>
+        <HoleResultPill winner={winner} teamAName={teamA.name} teamBName={teamB.name} />
+      </div>
+      <div className="px-3 pt-1 pb-1 bg-blue-950/15">
+        <PlayerScoreRow
+          playerId={aId}
+          playerName={getPlayerName(aId)}
+          holeNumber={holeNumber}
+          holePar={holePar}
+          scores={state.scores}
+          dispatch={dispatch}
+          color="blue"
+          highlight={winner === 'a'}
+        />
+      </div>
+      <div className="h-px bg-gray-800" />
+      <div className="px-3 pt-1 pb-1 bg-red-950/15">
+        <PlayerScoreRow
+          playerId={bId}
+          playerName={getPlayerName(bId)}
+          holeNumber={holeNumber}
+          holePar={holePar}
+          scores={state.scores}
+          dispatch={dispatch}
+          color="red"
+          highlight={winner === 'b'}
+        />
+      </div>
+    </div>
+  )
+}
+
+export default function Matches({ state, dispatch, teamA, teamB }) {
+  const [holeNum, setHoleNum] = useState(1)
+  const touchStart = useRef(null)
+
+  const hole = state.holes.find(h => h.number === holeNum) || { number: holeNum, par: 4 }
+  const isBack9 = holeNum >= 10
+  const matchesForHole = state.matches.filter(m => holeNum >= m.holeRange[0] && holeNum <= m.holeRange[1])
+  const { a: totalA, b: totalB } = calcTotalPoints(state.matches, state.holes, state.scores)
+  const holeAgg = getHoleAggregate(holeNum, state.matches, state.scores)
+
+  function prevHole() { setHoleNum(h => Math.max(1, h - 1)) }
+  function nextHole() { setHoleNum(h => Math.min(18, h + 1)) }
+
+  function handleTouchStart(e) {
+    touchStart.current = e.touches[0].clientX
+  }
+  function handleTouchEnd(e) {
+    if (touchStart.current === null) return
+    const dx = touchStart.current - e.changedTouches[0].clientX
+    if (Math.abs(dx) > 50) {
+      dx > 0 ? nextHole() : prevHole()
+    }
+    touchStart.current = null
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      {/* Header */}
-      <div className="bg-gradient-to-b from-green-950 to-gray-950 px-4 pt-6 pb-4">
-        <div className="text-center mb-4">
-          <div className="text-xs font-black uppercase tracking-widest text-green-400 mb-0.5">
-            {round.roundName || 'Round'}
+    <div
+      className="min-h-screen bg-gray-950"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Sticky tournament bar */}
+      <div className="sticky top-0 z-20 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800 px-4 py-2.5 flex items-center">
+        <div className="flex-1 text-left">
+          <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest leading-none mb-0.5">{teamA.name}</div>
+          <div className="text-2xl font-black text-blue-400 leading-none">{fmtPts(totalA)}</div>
+        </div>
+        <div className="text-center px-2">
+          <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">The Bromsgrove Cup</div>
+          <div className="text-[9px] text-gray-700">Need {POINTS_TO_WIN} to win</div>
+        </div>
+        <div className="flex-1 text-right">
+          <div className="text-[10px] text-red-500 font-black uppercase tracking-widest leading-none mb-0.5">{teamB.name}</div>
+          <div className="text-2xl font-black text-red-400 leading-none">{fmtPts(totalB)}</div>
+        </div>
+      </div>
+
+      {/* Hole header */}
+      <div className="bg-gradient-to-b from-gray-900 to-gray-950 px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <button
+            onClick={prevHole}
+            disabled={holeNum === 1}
+            className="flex-1 py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white font-bold text-sm active:scale-95 disabled:opacity-30"
+          >
+            ← H{Math.max(1, holeNum - 1)}
+          </button>
+          <div className="text-center px-3">
+            <div className="text-3xl font-black text-white leading-none">Hole {holeNum}</div>
+            <div className="text-sm text-gray-500 mt-0.5">Par {hole.par}</div>
           </div>
-          <h1 className="text-xl font-black text-white">
-            {isRyderCup ? 'Ryder Cup' : 'Match Play'}
-          </h1>
+          <button
+            onClick={nextHole}
+            disabled={holeNum === 18}
+            className="flex-1 py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white font-bold text-sm active:scale-95 disabled:opacity-30"
+          >
+            H{Math.min(18, holeNum + 1)} →
+          </button>
         </div>
 
-        {/* Team score (Ryder Cup) */}
-        {isRyderCup && ryderTotals && (
-          <div className="rounded-2xl bg-black/30 border border-gray-700 overflow-hidden">
-            <div className="flex">
-              <div className={`flex-1 py-4 text-center border-r border-gray-800`}>
-                <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${TEAM_COLOR_TEXT[teamA?.color] || 'text-blue-300'}`}>
-                  {teamA?.name || 'Team A'}
-                </div>
-                <div className={`text-5xl font-black ${TEAM_COLOR_TEXT[teamA?.color] || 'text-blue-200'}`}>
-                  {fmtPts(ryderTotals.aTotal)}
-                </div>
-              </div>
-              <div className={`flex-1 py-4 text-center`}>
-                <div className={`text-[10px] font-black uppercase tracking-widest mb-1 ${TEAM_COLOR_TEXT[teamB?.color] || 'text-red-300'}`}>
-                  {teamB?.name || 'Team B'}
-                </div>
-                <div className={`text-5xl font-black ${TEAM_COLOR_TEXT[teamB?.color] || 'text-red-200'}`}>
-                  {fmtPts(ryderTotals.bTotal)}
-                </div>
-              </div>
-            </div>
-            <div className="py-2 text-center border-t border-gray-800 bg-black/20">
-              {(() => {
-                const ptw = ryderCupSettings?.pointsToWin || Math.ceil(matches.length / 2) + 0.5
-                const { msg, winner } = ryderStatusMsg(ryderTotals.aTotal, ryderTotals.bTotal, ptw, teamA?.name || 'Team A', teamB?.name || 'Team B')
-                return (
-                  <span className={`text-sm font-bold ${winner ? 'text-yellow-300' : 'text-gray-300'}`}>
-                    {winner && '🏆 '}{msg}
-                  </span>
-                )
-              })()}
-            </div>
+        {/* This-hole points summary */}
+        {holeAgg.played > 0 ? (
+          <div className="text-center text-xs text-gray-500">
+            This hole:&nbsp;
+            <span className="text-blue-400 font-bold">{fmtPts(holeAgg.a)}</span>
+            <span className="text-gray-600"> – </span>
+            <span className="text-red-400 font-bold">{fmtPts(holeAgg.b)}</span>
+            <span className="text-gray-600"> &nbsp;({holeAgg.played}/{matchesForHole.length} matches)</span>
           </div>
-        )}
-
-        {/* Scoring method badge (Ryder Cup) */}
-        {isRyderCup && (
-          <div className="mt-2 text-center">
-            <span className="text-[10px] text-gray-600 font-semibold uppercase tracking-wide">
-              {scoringMethod === 'holeByHole' ? 'Hole-by-hole scoring' : 'Match result scoring'}
-              {scoringMethod === 'matchResult' && ' · Tap to set result'}
-            </span>
-          </div>
+        ) : (
+          <div className="text-center text-xs text-gray-700">No scores entered yet</div>
         )}
       </div>
 
-      {/* Match list */}
-      <div className="px-4 pb-8">
-        {matches.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">No matches set up.</p>
+      {/* Hole strip */}
+      <div className="flex overflow-x-auto px-4 py-2 gap-1.5 bg-gray-900/60 border-b border-gray-800">
+        {Array.from({ length: 18 }, (_, i) => i + 1).map(h => {
+          const agg = getHoleAggregate(h, state.matches, state.scores)
+          const dotCls =
+            agg.played === 0 ? 'bg-gray-800 text-gray-600' :
+            agg.a > agg.b ? 'bg-blue-700 text-white' :
+            agg.b > agg.a ? 'bg-red-700 text-white' :
+            'bg-gray-600 text-white'
+          return (
             <button
-              onClick={() => setTab('setup')}
-              className="px-4 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm active:scale-95"
+              key={h}
+              onClick={() => setHoleNum(h)}
+              className={`shrink-0 w-9 h-9 rounded-xl text-xs font-black transition-all ${dotCls} ${
+                h === holeNum
+                  ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-950 scale-110'
+                  : 'active:scale-95'
+              }`}
             >
-              Go to Setup
+              {h}
             </button>
-          </div>
-        )}
+          )
+        })}
+      </div>
 
-        {Object.entries(sections).map(([section, sectionMatches]) => (
-          <div key={section}>
-            {Object.keys(sections).length > 1 && (
-              <div className="flex items-center gap-3 my-4">
-                <div className="h-px flex-1 bg-gray-800" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-green-400">{section}</span>
-                <div className="h-px flex-1 bg-gray-800" />
-              </div>
-            )}
-            {sectionMatches.map(match => {
-              if (isRyderCup) {
-                if (scoringMethod === 'holeByHole') {
-                  return <RyderMatchCardHoleByHole key={match.id} match={match} players={players} teams={teams} holes={holes} scores={scores} />
-                }
-                return <RyderMatchCard key={match.id} match={match} players={players} teams={teams} dispatch={dispatch} />
-              }
-              return <MatchPlayCard key={match.id} match={match} players={players} teams={teams} holes={holes} scores={scores} />
-            })}
-          </div>
-        ))}
+      {/* Section label + match panels */}
+      <div className="px-4 pt-3 pb-20">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="h-px flex-1 bg-gray-800" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">
+            {isBack9 ? 'Back 9 — Singles' : 'Front 9 — Fourballs'}
+          </span>
+          <div className="h-px flex-1 bg-gray-800" />
+        </div>
 
-        {isRyderCup && scoringMethod === 'holeByHole' && matches.length > 0 && (
-          <p className="text-center text-xs text-gray-600 mt-4">
-            Enter hole-by-hole scores in the Scorecard tab. Results calculate automatically.
-          </p>
-        )}
+        <div className="space-y-3">
+          {matchesForHole.map(match => (
+            match.type === 'fourballs'
+              ? <FourballPanel
+                  key={match.id}
+                  match={match}
+                  holeNumber={holeNum}
+                  holePar={hole.par}
+                  state={state}
+                  dispatch={dispatch}
+                  teamA={teamA}
+                  teamB={teamB}
+                />
+              : <SinglesPanel
+                  key={match.id}
+                  match={match}
+                  holeNumber={holeNum}
+                  holePar={hole.par}
+                  state={state}
+                  dispatch={dispatch}
+                  teamA={teamA}
+                  teamB={teamB}
+                />
+          ))}
+        </div>
       </div>
     </div>
   )
