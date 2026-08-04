@@ -1,64 +1,61 @@
-export function fmtPts(n) {
-  return n % 1 === 0 ? String(n) : n.toFixed(1)
+export function getScore(scores, playerId, holeNumber) {
+  return scores.find(s => s.player_id === playerId && s.hole_number === holeNumber)?.strokes ?? null
 }
 
-export function calcHoleWinner(holeNumber, match, scores) {
-  const { type, teamAPlayerIds, teamBPlayerIds } = match
-  let aScore, bScore
-  if (type === 'fourballs') {
-    const aArr = teamAPlayerIds.map(id => scores[id]?.[holeNumber]?.gross).filter(v => v != null)
-    const bArr = teamBPlayerIds.map(id => scores[id]?.[holeNumber]?.gross).filter(v => v != null)
-    if (!aArr.length || !bArr.length) return null
-    aScore = Math.min(...aArr)
-    bScore = Math.min(...bArr)
-  } else {
-    aScore = scores[teamAPlayerIds[0]]?.[holeNumber]?.gross
-    bScore = scores[teamBPlayerIds[0]]?.[holeNumber]?.gross
-    if (aScore == null || bScore == null) return null
-  }
-  if (aScore < bScore) return 'a'
-  if (bScore < aScore) return 'b'
-  return 'halved'
+export function calcGross(scores, playerId) {
+  return scores.filter(s => s.player_id === playerId).reduce((sum, s) => sum + s.strokes, 0)
 }
 
-export function calcMatchPoints(match, holes, scores) {
-  const [start, end] = match.holeRange
-  let a = 0, b = 0
-  for (let h = start; h <= end; h++) {
-    const winner = calcHoleWinner(h, match, scores)
-    if (winner === 'a') a += 1
-    else if (winner === 'b') b += 1
-    else if (winner === 'halved') { a += 0.5; b += 0.5 }
-  }
-  return { a, b }
+export function holesPlayed(scores, playerId) {
+  return scores.filter(s => s.player_id === playerId).length
 }
 
-export function calcTotalPoints(matches, holes, scores) {
-  let a = 0, b = 0
-  for (const match of matches) {
-    const pts = calcMatchPoints(match, holes, scores)
-    a += pts.a
-    b += pts.b
-  }
-  return { a, b }
+// Net = gross − handicap (applied once at end). Returns null if no holes played.
+export function calcNet(scores, playerId, handicap) {
+  if (holesPlayed(scores, playerId) === 0) return null
+  return calcGross(scores, playerId) - (handicap ?? 0)
 }
 
-export function calcTotalHolesPlayed(matches, holes, scores) {
-  let total = 0
-  for (const match of matches) {
-    const [start, end] = match.holeRange
-    for (let h = start; h <= end; h++) {
-      if (calcHoleWinner(h, match, scores) !== null) total++
-    }
-  }
-  return total
+// Leaderboard for a single round, sorted by net ascending (lowest wins).
+export function buildRoundLeaderboard(scores, players) {
+  return players
+    .map(player => {
+      const played = holesPlayed(scores, player.id)
+      const gross  = calcGross(scores, player.id)
+      const net    = played > 0 ? gross - player.handicap : null
+      return { player, gross, net, played }
+    })
+    .sort((a, b) => {
+      if (a.net === null && b.net === null) return 0
+      if (a.net === null) return 1
+      if (b.net === null) return -1
+      return a.net - b.net
+    })
 }
 
-export function getStatusMsg(a, b, pointsToWin, nameA, nameB) {
-  if (a >= pointsToWin) return { msg: `${nameA} win! 🏆`, winner: 'a' }
-  if (b >= pointsToWin) return { msg: `${nameB} win! 🏆`, winner: 'b' }
-  const diff = Math.abs(a - b)
-  if (a === b) return { msg: 'All square', winner: null }
-  const leader = a > b ? nameA : nameB
-  return { msg: `${leader} lead by ${fmtPts(diff)}`, winner: null }
+// Trip-wide leaderboard across all rounds, sorted by total net ascending.
+export function buildTripLeaderboard(allScores, rounds, players) {
+  return players
+    .map(player => {
+      const roundEntries = rounds.map(round => {
+        const rs = allScores.filter(s => s.round_id === round.id && s.player_id === player.id)
+        if (rs.length === 0) return null
+        const gross = rs.reduce((sum, s) => sum + s.strokes, 0)
+        const net   = gross - player.handicap
+        return { round, gross, net, played: rs.length }
+      }).filter(Boolean)
+
+      const roundsPlayed = roundEntries.length
+      const totalGross   = roundEntries.reduce((sum, r) => sum + r.gross, 0)
+      const totalNet     = roundEntries.reduce((sum, r) => sum + r.net, 0)
+      const avgNet       = roundsPlayed > 0 ? totalNet / roundsPlayed : null
+
+      return { player, roundEntries, roundsPlayed, totalGross, totalNet, avgNet }
+    })
+    .sort((a, b) => {
+      if (a.roundsPlayed === 0 && b.roundsPlayed === 0) return 0
+      if (a.roundsPlayed === 0) return 1
+      if (b.roundsPlayed === 0) return -1
+      return a.totalNet - b.totalNet
+    })
 }

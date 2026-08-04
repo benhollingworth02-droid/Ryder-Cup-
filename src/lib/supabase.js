@@ -1,69 +1,106 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+const URL = import.meta.env.VITE_SUPABASE_URL
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null
-
+export const supabase    = URL && KEY ? createClient(URL, KEY) : null
 export const hasSupabase = !!supabase
 
-// Startup diagnostic — visible in browser DevTools console
-console.log('[Supabase] init', {
-  url: SUPABASE_URL ? SUPABASE_URL : 'NOT SET',
-  keyPresent: !!SUPABASE_ANON_KEY,
-  clientCreated: hasSupabase,
-})
+console.log('[Supabase] init', { url: URL ?? 'NOT SET', keyPresent: !!KEY, clientCreated: hasSupabase })
 
-// Save or update a round in Supabase
-export async function saveRoundRemote(round, adminPinHash) {
-  if (!supabase) return { error: 'Supabase not configured' }
-  const { error } = await supabase
-    .from('rounds')
-    .upsert({
-      id: round.id,
-      data: round,
-      admin_pin_hash: adminPinHash,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' })
-  return { error }
+// ── Players ───────────────────────────────────────────────────────────────────
+
+export async function fetchPlayers() {
+  if (!supabase) return { data: [], error: 'Not configured' }
+  return supabase.from('players').select('*').order('created_at')
 }
 
-// Load a round by share code
-export async function loadRoundRemote(code) {
-  if (!supabase) return { data: null, error: 'Supabase not configured' }
-  const { data, error } = await supabase
-    .from('rounds')
-    .select('data, admin_pin_hash')
-    .eq('id', code.toUpperCase())
-    .single()
-  if (error) return { data: null, error }
-  return { data: { round: data.data, adminPinHash: data.admin_pin_hash }, error: null }
+export async function createPlayer(name, handicap) {
+  if (!supabase) return { data: null, error: 'Not configured' }
+  return supabase.from('players').insert({ name, handicap }).select().single()
 }
 
-// Subscribe to live updates for a round.
-// onError(err) is called if the subscription itself fails.
-export function subscribeToRound(code, onUpdate, onError) {
+export async function updatePlayer(id, name, handicap) {
+  if (!supabase) return { error: 'Not configured' }
+  return supabase.from('players').update({ name, handicap }).eq('id', id)
+}
+
+export async function deletePlayer(id) {
+  if (!supabase) return { error: 'Not configured' }
+  return supabase.from('players').delete().eq('id', id)
+}
+
+// ── Rounds ────────────────────────────────────────────────────────────────────
+
+export async function fetchRounds() {
+  if (!supabase) return { data: [], error: 'Not configured' }
+  return supabase.from('rounds').select('*').order('date', { ascending: false })
+}
+
+export async function createRound(date, course, holes) {
+  if (!supabase) return { data: null, error: 'Not configured' }
+  return supabase.from('rounds').insert({ date, course, holes }).select().single()
+}
+
+export async function deleteRound(id) {
+  if (!supabase) return { error: 'Not configured' }
+  return supabase.from('rounds').delete().eq('id', id)
+}
+
+// ── Scores ────────────────────────────────────────────────────────────────────
+
+export async function fetchScores(roundId) {
+  if (!supabase) return { data: [], error: 'Not configured' }
+  return supabase.from('scores').select('*').eq('round_id', roundId)
+}
+
+export async function fetchAllScores() {
+  if (!supabase) return { data: [], error: 'Not configured' }
+  return supabase.from('scores').select('*')
+}
+
+export async function upsertScore(roundId, playerId, holeNumber, strokes) {
+  if (!supabase) return { error: 'Not configured' }
+  return supabase.from('scores').upsert(
+    { round_id: roundId, player_id: playerId, hole_number: holeNumber, strokes, updated_at: new Date().toISOString() },
+    { onConflict: 'round_id,player_id,hole_number' }
+  )
+}
+
+export async function deleteScore(roundId, playerId, holeNumber) {
+  if (!supabase) return { error: 'Not configured' }
+  return supabase.from('scores')
+    .delete()
+    .eq('round_id', roundId)
+    .eq('player_id', playerId)
+    .eq('hole_number', holeNumber)
+}
+
+// ── Realtime ──────────────────────────────────────────────────────────────────
+
+export function subscribePlayers(callback) {
   if (!supabase) return null
-  const channel = supabase
-    .channel(`round-${code}`)
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'rounds', filter: `id=eq.${code.toUpperCase()}` },
-      payload => {
-        if (payload.new?.data) onUpdate(payload.new.data)
-      }
-    )
-    .subscribe((status, err) => {
-      if (err) {
-        console.error('[Supabase] realtime subscribe error:', err)
-        if (onError) onError(err)
-      }
-    })
-  return channel
+  return supabase.channel('players-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, callback)
+    .subscribe()
 }
 
-export function unsubscribeFromRound(channel) {
+export function subscribeRounds(callback) {
+  if (!supabase) return null
+  return supabase.channel('rounds-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds' }, callback)
+    .subscribe()
+}
+
+export function subscribeScores(roundId, callback) {
+  if (!supabase) return null
+  return supabase.channel(`scores-${roundId}`)
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'scores', filter: `round_id=eq.${roundId}` },
+      callback)
+    .subscribe()
+}
+
+export function unsubscribe(channel) {
   if (supabase && channel) supabase.removeChannel(channel)
 }
