@@ -3,7 +3,7 @@ import {
   hasSupabase,
   fetchPlayers, fetchRounds, fetchScores,
   subscribePlayers, subscribeRounds, subscribeScores, unsubscribe,
-  upsertScore, deleteScore,
+  upsertScore, deleteScore, deleteRound,
 } from './lib/supabase'
 import Home             from './screens/Home'
 import Players          from './screens/Players'
@@ -119,6 +119,12 @@ export default function App() {
   function openLeaderboard(round) { setActiveRound(round); setScreen('round-leaderboard') }
   function goHome()               { setScreen('home') }
 
+  async function handleDeleteRound(round) {
+    if (!window.confirm(`Delete "${round.course}"? This removes all scores for this round and cannot be undone.`)) return
+    setRounds(prev => prev.filter(r => r.id !== round.id))
+    await deleteRound(round.id)
+  }
+
   // ── Loading / error states ─────────────────────────────────────────────────
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -152,6 +158,7 @@ export default function App() {
             onNewRound={() => setScreen('new-round')}
             onScoring={openScoring}
             onLeaderboard={openLeaderboard}
+            onDeleteRound={handleDeleteRound}
           />
         </div>
       )}

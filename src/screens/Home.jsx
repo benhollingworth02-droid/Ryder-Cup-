@@ -4,15 +4,24 @@ function fmt(dateStr) {
   })
 }
 
-function RoundCard({ round, onScoring, onLeaderboard }) {
+function RoundCard({ round, onScoring, onLeaderboard, onDelete }) {
   return (
     <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-800">
-        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
-          {fmt(round.date)}
+      <div className="px-4 py-3 border-b border-gray-800 flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
+            {fmt(round.date)}
+          </div>
+          <div className="font-black text-white text-base leading-tight">{round.course}</div>
+          <div className="text-xs text-gray-600 mt-0.5">{round.holes} holes</div>
         </div>
-        <div className="font-black text-white text-base leading-tight">{round.course}</div>
-        <div className="text-xs text-gray-600 mt-0.5">{round.holes} holes</div>
+        <button
+          onClick={() => onDelete(round)}
+          className="w-8 h-8 flex items-center justify-center text-gray-700 hover:text-red-400 active:scale-90 rounded-lg shrink-0 mt-0.5"
+          title="Delete round"
+        >
+          🗑
+        </button>
       </div>
       <div className="flex">
         <button
@@ -32,7 +41,7 @@ function RoundCard({ round, onScoring, onLeaderboard }) {
   )
 }
 
-export default function Home({ rounds, onNewRound, onScoring, onLeaderboard }) {
+export default function Home({ rounds, onNewRound, onScoring, onLeaderboard, onDeleteRound }) {
   return (
     <div className="min-h-screen bg-gray-950 px-4 pb-6">
       <div className="bg-gradient-to-b from-gray-900 to-gray-950 -mx-4 px-4 pt-8 pb-6 mb-5 text-center">
@@ -61,6 +70,7 @@ export default function Home({ rounds, onNewRound, onScoring, onLeaderboard }) {
               round={round}
               onScoring={onScoring}
               onLeaderboard={onLeaderboard}
+              onDelete={onDeleteRound}
             />
           ))}
         </div>
