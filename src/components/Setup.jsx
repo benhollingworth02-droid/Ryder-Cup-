@@ -3,9 +3,9 @@ import { useState } from 'react'
 function SectionTitle({ children }) {
   return (
     <div className="flex items-center gap-3 mb-3 mt-5">
-      <div className="h-px flex-1 bg-gray-800" />
-      <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 whitespace-nowrap">{children}</h2>
-      <div className="h-px flex-1 bg-gray-800" />
+      <div className="h-px flex-1 bg-slate-800" />
+      <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">{children}</h2>
+      <div className="h-px flex-1 bg-slate-800" />
     </div>
   )
 }
@@ -23,18 +23,18 @@ function EditableNameRow({ label, value, onSave, color }) {
 
   if (editing) {
     return (
-      <div className="flex items-center gap-2 bg-gray-800/60 rounded-xl border border-gray-700 px-3 py-2">
-        {label && <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wide shrink-0">{label}</span>}
+      <div className="flex items-center gap-2 bg-slate-800/60 rounded-xl border border-slate-700 px-3 py-2">
+        {label && <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide shrink-0">{label}</span>}
         <input
           autoFocus
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') save() }}
-          className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border border-gray-600 focus:outline-none focus:border-green-600 min-w-0"
+          className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border border-slate-600 focus:outline-none focus:border-green-600 min-w-0"
         />
         <button
           onClick={save}
-          className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-bold active:scale-95 shrink-0"
+          className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm font-bold active:scale-95 shrink-0"
         >
           ✓
         </button>
@@ -43,13 +43,13 @@ function EditableNameRow({ label, value, onSave, color }) {
   }
 
   return (
-    <div className="flex items-center gap-2 bg-gray-900 rounded-xl border border-gray-800 px-3 py-2.5">
+    <div className="flex items-center gap-2 bg-slate-900 rounded-xl border border-slate-800 px-3 py-2.5">
       {color && <span className={`w-2 h-2 rounded-full ${dotColor} shrink-0`} />}
-      {label && <span className="text-[10px] text-gray-600 font-bold uppercase tracking-wide shrink-0">{label}</span>}
+      {label && <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wide shrink-0">{label}</span>}
       <span className="flex-1 text-sm font-semibold text-white">{value}</span>
       <button
         onClick={() => { setDraft(value); setEditing(true) }}
-        className="text-gray-500 hover:text-white text-sm px-2 py-1 active:scale-95"
+        className="text-slate-500 hover:text-white text-sm px-2 py-1 active:scale-95"
       >
         ✏️
       </button>
@@ -64,11 +64,11 @@ export default function Setup({ state, dispatch }) {
   const wPlayers = state.players.filter(p => p.teamId === 'team-w')
 
   return (
-    <div className="min-h-screen bg-gray-950 px-4 pb-10">
+    <div className="min-h-screen bg-slate-950 px-4 pb-10">
       <div className="bg-gradient-to-b from-gray-900 to-gray-950 -mx-4 px-4 pt-6 pb-5 mb-1 text-center">
-        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">The Bromsgrove Cup</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">The Bromsgrove Cup</div>
         <h1 className="text-xl font-black text-white">Setup</h1>
-        <p className="text-xs text-gray-600 mt-1">Edit names and hole pars. Changes apply immediately.</p>
+        <p className="text-xs text-slate-600 mt-1">Edit names and hole pars. Changes apply immediately.</p>
       </div>
 
       {/* Teams */}
@@ -116,14 +116,14 @@ export default function Setup({ state, dispatch }) {
 
       {/* Hole pars */}
       <SectionTitle>Hole Pars</SectionTitle>
-      <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
         <div className="grid grid-cols-2 divide-x divide-gray-800">
           {/* Front 9 */}
           <div>
-            <div className="px-3 py-1.5 bg-gray-800/60 text-[10px] font-black uppercase tracking-widest text-gray-500">Front 9</div>
+            <div className="px-3 py-1.5 bg-slate-800/60 text-[10px] font-black uppercase tracking-widest text-slate-500">Front 9</div>
             {state.holes.slice(0, 9).map(hole => (
-              <div key={hole.number} className="flex items-center border-t border-gray-800 px-3 py-1.5">
-                <span className="text-xs text-gray-500 font-bold w-6">H{hole.number}</span>
+              <div key={hole.number} className="flex items-center border-t border-slate-800 px-3 py-1.5">
+                <span className="text-xs text-slate-500 font-bold w-6">H{hole.number}</span>
                 <div className="flex gap-1 ml-auto">
                   {[3, 4, 5].map(par => (
                     <button
@@ -132,7 +132,7 @@ export default function Setup({ state, dispatch }) {
                       className={`w-8 h-7 rounded-lg text-xs font-black active:scale-95 transition-all ${
                         hole.par === par
                           ? 'bg-green-700 text-white'
-                          : 'bg-gray-800 text-gray-500 border border-gray-700'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700'
                       }`}
                     >
                       {par}
@@ -144,10 +144,10 @@ export default function Setup({ state, dispatch }) {
           </div>
           {/* Back 9 */}
           <div>
-            <div className="px-3 py-1.5 bg-gray-800/60 text-[10px] font-black uppercase tracking-widest text-gray-500">Back 9</div>
+            <div className="px-3 py-1.5 bg-slate-800/60 text-[10px] font-black uppercase tracking-widest text-slate-500">Back 9</div>
             {state.holes.slice(9, 18).map(hole => (
-              <div key={hole.number} className="flex items-center border-t border-gray-800 px-3 py-1.5">
-                <span className="text-xs text-gray-500 font-bold w-7">H{hole.number}</span>
+              <div key={hole.number} className="flex items-center border-t border-slate-800 px-3 py-1.5">
+                <span className="text-xs text-slate-500 font-bold w-7">H{hole.number}</span>
                 <div className="flex gap-1 ml-auto">
                   {[3, 4, 5].map(par => (
                     <button
@@ -156,7 +156,7 @@ export default function Setup({ state, dispatch }) {
                       className={`w-8 h-7 rounded-lg text-xs font-black active:scale-95 transition-all ${
                         hole.par === par
                           ? 'bg-green-700 text-white'
-                          : 'bg-gray-800 text-gray-500 border border-gray-700'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700'
                       }`}
                     >
                       {par}
@@ -167,8 +167,8 @@ export default function Setup({ state, dispatch }) {
             ))}
           </div>
         </div>
-        <div className="px-3 py-2 border-t border-gray-800 text-center">
-          <span className="text-xs text-gray-600">
+        <div className="px-3 py-2 border-t border-slate-800 text-center">
+          <span className="text-xs text-slate-600">
             Total par: {state.holes.reduce((s, h) => s + h.par, 0)}
           </span>
         </div>

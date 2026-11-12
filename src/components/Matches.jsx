@@ -16,7 +16,7 @@ function getHoleAggregate(holeNum, matches, scores) {
 }
 
 function HoleResultPill({ winner, teamAName, teamBName }) {
-  if (winner === null) return <span className="text-[10px] text-gray-600 font-semibold">Incomplete</span>
+  if (winner === null) return <span className="text-[10px] text-slate-600 font-semibold">Incomplete</span>
   if (winner === 'halved') return (
     <span className="text-[10px] bg-gray-700/80 text-gray-300 px-2 py-0.5 rounded-full font-bold">
       Halved · ½pt each
@@ -52,13 +52,13 @@ function PlayerScoreRow({ playerId, playerName, holeNumber, holePar, scores, dis
 
   return (
     <div className={`flex items-center gap-2 py-2 ${highlight ? 'opacity-100' : 'opacity-75'}`}>
-      <span className={`flex-1 text-sm min-w-0 truncate ${highlight ? 'text-white font-bold' : 'text-gray-400 font-semibold'}`}>
+      <span className={`flex-1 text-sm min-w-0 truncate ${highlight ? 'text-white font-bold' : 'text-slate-400 font-semibold'}`}>
         {playerName}
-        {highlight && gross != null && <span className="ml-1 text-[9px] text-green-400 font-black">★</span>}
+        {highlight && gross != null && <span className="ml-1 text-[9px] text-emerald-400 font-black">★</span>}
       </span>
       <button
         onClick={() => adjust(-1)}
-        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-xl font-bold flex items-center justify-center active:scale-90 shrink-0"
+        className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 text-white text-xl font-bold flex items-center justify-center active:scale-90 shrink-0"
       >
         −
       </button>
@@ -68,12 +68,12 @@ function PlayerScoreRow({ playerId, playerName, holeNumber, holePar, scores, dis
             {gross}
           </button>
         ) : (
-          <span className="text-2xl font-black text-gray-700">—</span>
+          <span className="text-2xl font-black text-slate-700">—</span>
         )}
       </div>
       <button
         onClick={() => adjust(+1)}
-        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-xl font-bold flex items-center justify-center active:scale-90 shrink-0"
+        className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 text-white text-xl font-bold flex items-center justify-center active:scale-90 shrink-0"
       >
         +
       </button>
@@ -93,13 +93,13 @@ function FourballPanel({ match, holeNumber, holePar, state, dispatch, teamA, tea
   const borderClass =
     winner === 'a' ? 'border-blue-700/60' :
     winner === 'b' ? 'border-red-700/60' :
-    winner === 'halved' ? 'border-gray-600/60' :
-    'border-gray-800'
+    winner === 'halved' ? 'border-slate-600/60' :
+    'border-slate-800'
 
   return (
     <div className={`rounded-2xl border overflow-hidden ${borderClass}`}>
-      <div className="px-3 py-2 bg-gray-800/60 flex items-center justify-between">
-        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{match.name}</span>
+      <div className="px-3 py-2 bg-slate-800/60 flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{match.name}</span>
         <HoleResultPill winner={winner} teamAName={teamA.name} teamBName={teamB.name} />
       </div>
 
@@ -126,7 +126,7 @@ function FourballPanel({ match, holeNumber, holePar, state, dispatch, teamA, tea
         ))}
       </div>
 
-      <div className="h-px bg-gray-800" />
+      <div className="h-px bg-slate-800" />
 
       {/* Team B */}
       <div className="px-3 pt-2 pb-2 bg-red-950/25">
@@ -163,13 +163,13 @@ function SinglesPanel({ match, holeNumber, holePar, state, dispatch, teamA, team
   const borderClass =
     winner === 'a' ? 'border-blue-700/60' :
     winner === 'b' ? 'border-red-700/60' :
-    winner === 'halved' ? 'border-gray-600/60' :
-    'border-gray-800'
+    winner === 'halved' ? 'border-slate-600/60' :
+    'border-slate-800'
 
   return (
     <div className={`rounded-xl border overflow-hidden ${borderClass}`}>
-      <div className="px-3 py-1.5 bg-gray-800/60 flex items-center justify-between">
-        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{match.name}</span>
+      <div className="px-3 py-1.5 bg-slate-800/60 flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{match.name}</span>
         <HoleResultPill winner={winner} teamAName={teamA.name} teamBName={teamB.name} />
       </div>
       <div className="px-3 pt-1 pb-1 bg-blue-950/15">
@@ -184,7 +184,7 @@ function SinglesPanel({ match, holeNumber, holePar, state, dispatch, teamA, team
           highlight={winner === 'a'}
         />
       </div>
-      <div className="h-px bg-gray-800" />
+      <div className="h-px bg-slate-800" />
       <div className="px-3 pt-1 pb-1 bg-red-950/15">
         <PlayerScoreRow
           playerId={bId}
@@ -228,19 +228,19 @@ export default function Matches({ state, dispatch, teamA, teamB }) {
 
   return (
     <div
-      className="min-h-screen bg-gray-950"
+      className="min-h-screen bg-slate-950"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* Sticky tournament bar */}
-      <div className="sticky top-0 z-20 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800 px-4 py-2.5 flex items-center">
+      <div className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 px-4 py-2.5 flex items-center">
         <div className="flex-1 text-left">
           <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest leading-none mb-0.5">{teamA.name}</div>
           <div className="text-2xl font-black text-blue-400 leading-none">{fmtPts(totalA)}</div>
         </div>
         <div className="text-center px-2">
-          <div className="text-[9px] font-black uppercase tracking-widest text-gray-600">The Bromsgrove Cup</div>
-          <div className="text-[9px] text-gray-700">Need {POINTS_TO_WIN} to win</div>
+          <div className="text-[9px] font-black uppercase tracking-widest text-slate-600">The Bromsgrove Cup</div>
+          <div className="text-[9px] text-slate-700">Need {POINTS_TO_WIN} to win</div>
         </div>
         <div className="flex-1 text-right">
           <div className="text-[10px] text-red-500 font-black uppercase tracking-widest leading-none mb-0.5">{teamB.name}</div>
@@ -254,18 +254,18 @@ export default function Matches({ state, dispatch, teamA, teamB }) {
           <button
             onClick={prevHole}
             disabled={holeNum === 1}
-            className="flex-1 py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white font-bold text-sm active:scale-95 disabled:opacity-30"
+            className="flex-1 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-sm active:scale-95 disabled:opacity-30"
           >
             ← H{Math.max(1, holeNum - 1)}
           </button>
           <div className="text-center px-3">
             <div className="text-3xl font-black text-white leading-none">Hole {holeNum}</div>
-            <div className="text-sm text-gray-500 mt-0.5">Par {hole.par}</div>
+            <div className="text-sm text-slate-500 mt-0.5">Par {hole.par}</div>
           </div>
           <button
             onClick={nextHole}
             disabled={holeNum === 18}
-            className="flex-1 py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-white font-bold text-sm active:scale-95 disabled:opacity-30"
+            className="flex-1 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-sm active:scale-95 disabled:opacity-30"
           >
             H{Math.min(18, holeNum + 1)} →
           </button>
@@ -273,24 +273,24 @@ export default function Matches({ state, dispatch, teamA, teamB }) {
 
         {/* This-hole points summary */}
         {holeAgg.played > 0 ? (
-          <div className="text-center text-xs text-gray-500">
+          <div className="text-center text-xs text-slate-500">
             This hole:&nbsp;
             <span className="text-blue-400 font-bold">{fmtPts(holeAgg.a)}</span>
-            <span className="text-gray-600"> – </span>
+            <span className="text-slate-600"> – </span>
             <span className="text-red-400 font-bold">{fmtPts(holeAgg.b)}</span>
-            <span className="text-gray-600"> &nbsp;({holeAgg.played}/{matchesForHole.length} matches)</span>
+            <span className="text-slate-600"> &nbsp;({holeAgg.played}/{matchesForHole.length} matches)</span>
           </div>
         ) : (
-          <div className="text-center text-xs text-gray-700">No scores entered yet</div>
+          <div className="text-center text-xs text-slate-700">No scores entered yet</div>
         )}
       </div>
 
       {/* Hole strip */}
-      <div className="flex overflow-x-auto px-4 py-2 gap-1.5 bg-gray-900/60 border-b border-gray-800">
+      <div className="flex overflow-x-auto px-4 py-2 gap-1.5 bg-slate-900/60 border-b border-slate-800">
         {Array.from({ length: 18 }, (_, i) => i + 1).map(h => {
           const agg = getHoleAggregate(h, state.matches, state.scores)
           const dotCls =
-            agg.played === 0 ? 'bg-gray-800 text-gray-600' :
+            agg.played === 0 ? 'bg-slate-800 text-slate-600' :
             agg.a > agg.b ? 'bg-blue-700 text-white' :
             agg.b > agg.a ? 'bg-red-700 text-white' :
             'bg-gray-600 text-white'
@@ -313,11 +313,11 @@ export default function Matches({ state, dispatch, teamA, teamB }) {
       {/* Section label + match panels */}
       <div className="px-4 pt-3 pb-20">
         <div className="flex items-center gap-3 mb-3">
-          <div className="h-px flex-1 bg-gray-800" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">
+          <div className="h-px flex-1 bg-slate-800" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">
             {isBack9 ? 'Back 9 — Singles' : 'Front 9 — Fourballs'}
           </span>
-          <div className="h-px flex-1 bg-gray-800" />
+          <div className="h-px flex-1 bg-slate-800" />
         </div>
 
         <div className="space-y-3">

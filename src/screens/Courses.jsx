@@ -13,13 +13,13 @@ function HoleEditor({ holes, onChange }) {
   return (
     <div className="space-y-1">
       <div className="flex gap-1 px-1 mb-2">
-        <div className="w-7 text-[9px] text-gray-600 text-center font-bold">H</div>
-        <div className="flex-1 text-[9px] text-gray-600 text-center font-bold">PAR</div>
-        <div className="w-14 text-[9px] text-gray-600 text-center font-bold">SI</div>
+        <div className="w-7 text-[9px] text-slate-600 text-center font-bold">H</div>
+        <div className="flex-1 text-[9px] text-slate-600 text-center font-bold">PAR</div>
+        <div className="w-14 text-[9px] text-slate-600 text-center font-bold">SI</div>
       </div>
       {holes.map((hole, idx) => (
         <div key={hole.number} className="flex items-center gap-1">
-          <div className="w-7 text-xs text-gray-500 text-center font-bold shrink-0">{hole.number}</div>
+          <div className="w-7 text-xs text-slate-500 text-center font-bold shrink-0">{hole.number}</div>
           <div className="flex-1 flex gap-0.5">
             {[3, 4, 5].map(p => (
               <button
@@ -32,8 +32,8 @@ function HoleEditor({ holes, onChange }) {
                 }}
                 className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 ${
                   hole.par === p
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-500 border border-gray-700'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-800 text-slate-500 border border-slate-700'
                 }`}
               >
                 {p}
@@ -52,7 +52,7 @@ function HoleEditor({ holes, onChange }) {
               next[idx] = { ...hole, stroke_index: v }
               onChange(next)
             }}
-            className="w-14 bg-gray-800 border border-gray-700 text-white text-xs text-center rounded-lg py-1.5 focus:outline-none focus:border-green-500"
+            className="w-14 bg-slate-800 border border-slate-700 text-white text-xs text-center rounded-lg py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
       ))}
@@ -92,16 +92,16 @@ function CourseCard({ course, onUpdated, onDeleted }) {
 
   if (editing) {
     return (
-      <div className="bg-gray-800 rounded-2xl border border-gray-700 p-4 space-y-4">
+      <div className="bg-slate-800 rounded-2xl border border-slate-700 p-4 space-y-4">
         <input
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
-          className="w-full bg-gray-700 text-white rounded-xl px-3 py-3 text-sm border border-gray-600 focus:outline-none focus:border-green-500"
+          className="w-full bg-gray-700 text-white rounded-xl px-3 py-3 text-sm border border-slate-600 focus:outline-none focus:border-emerald-500"
           placeholder="Course name"
         />
         <div>
-          <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">
             Hole Details
           </div>
           <HoleEditor holes={holes} onChange={setHoles} />
@@ -110,7 +110,7 @@ function CourseCard({ course, onUpdated, onDeleted }) {
           <button
             onClick={save}
             disabled={saving}
-            className="flex-1 py-3 bg-green-600 text-white rounded-xl text-sm font-bold active:scale-95 disabled:opacity-50"
+            className="flex-1 py-3 bg-emerald-500 text-white rounded-xl text-sm font-bold active:scale-95 disabled:opacity-50"
           >
             {saving ? 'Saving…' : '✓ Save'}
           </button>
@@ -126,44 +126,44 @@ function CourseCard({ course, onUpdated, onDeleted }) {
   }
 
   return (
-    <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+    <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
       <div className="px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => setExpanded(e => !e)}
           className="flex-1 min-w-0 text-left"
         >
           <div className="font-bold text-white text-sm truncate">{course.name}</div>
-          <div className="text-xs text-gray-500 mt-0.5">
+          <div className="text-xs text-slate-500 mt-0.5">
             {course.total_holes} holes
             {course.holes?.length ? ` · par/SI set` : ' · default par/SI'}
           </div>
         </button>
         <button
           onClick={() => { setExpanded(true); setEditing(true) }}
-          className="w-9 h-9 flex items-center justify-center text-gray-500 hover:text-white active:scale-90 rounded-xl"
+          className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-white active:scale-90 rounded-xl"
         >
           ✏️
         </button>
         <button
           onClick={remove}
-          className="w-9 h-9 flex items-center justify-center text-gray-700 hover:text-red-400 active:scale-90 rounded-xl"
+          className="w-9 h-9 flex items-center justify-center text-slate-700 hover:text-red-400 active:scale-90 rounded-xl"
         >
           🗑
         </button>
       </div>
 
       {expanded && !editing && course.holes?.length > 0 && (
-        <div className="border-t border-gray-800 px-4 py-3">
+        <div className="border-t border-slate-800 px-4 py-3">
           <div className="flex gap-1 mb-2">
-            <div className="w-7 text-[9px] text-gray-600 text-center font-bold">H</div>
-            <div className="flex-1 text-[9px] text-gray-600 text-center font-bold">PAR</div>
-            <div className="w-10 text-[9px] text-gray-600 text-center font-bold">SI</div>
+            <div className="w-7 text-[9px] text-slate-600 text-center font-bold">H</div>
+            <div className="flex-1 text-[9px] text-slate-600 text-center font-bold">PAR</div>
+            <div className="w-10 text-[9px] text-slate-600 text-center font-bold">SI</div>
           </div>
           {course.holes.map(h => (
             <div key={h.number} className="flex items-center gap-1 py-0.5">
-              <div className="w-7 text-xs text-gray-500 text-center">{h.number}</div>
+              <div className="w-7 text-xs text-slate-500 text-center">{h.number}</div>
               <div className="flex-1 text-xs text-white text-center">{h.par}</div>
-              <div className="w-10 text-xs text-gray-400 text-center">{h.stroke_index}</div>
+              <div className="w-10 text-xs text-slate-400 text-center">{h.stroke_index}</div>
             </div>
           ))}
         </div>
@@ -201,14 +201,14 @@ function AddCourseForm({ onAdded }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-gray-900 rounded-2xl border border-gray-800 p-4 space-y-4">
-      <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Add Course</div>
+    <form onSubmit={submit} className="bg-slate-900 rounded-2xl border border-slate-800 p-4 space-y-4">
+      <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Add Course</div>
 
       <input
         value={name}
         onChange={e => setName(e.target.value)}
         placeholder="Course name"
-        className="w-full bg-gray-800 text-white rounded-xl px-3 py-3 text-sm border border-gray-700 focus:outline-none focus:border-green-500 placeholder-gray-700"
+        className="w-full bg-slate-800 text-white rounded-xl px-3 py-3 text-sm border border-slate-700 focus:outline-none focus:border-emerald-500 placeholder-gray-700"
       />
 
       <div className="flex gap-2">
@@ -219,8 +219,8 @@ function AddCourseForm({ onAdded }) {
             onClick={() => handleTotalChange(h)}
             className={`flex-1 py-3 rounded-xl font-black text-sm transition-all active:scale-95 ${
               total === h
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-800 text-gray-400 border border-gray-700'
+                ? 'bg-emerald-500 text-white'
+                : 'bg-slate-800 text-slate-400 border border-slate-700'
             }`}
           >
             {h} holes
@@ -231,7 +231,7 @@ function AddCourseForm({ onAdded }) {
       <button
         type="button"
         onClick={() => setShowHoles(s => !s)}
-        className="w-full py-2 text-xs text-gray-500 border border-gray-700 rounded-xl active:bg-gray-800"
+        className="w-full py-2 text-xs text-slate-500 border border-slate-700 rounded-xl active:bg-slate-800"
       >
         {showHoles ? '▲ Hide' : '▼ Set par & stroke index (optional)'}
       </button>
@@ -243,7 +243,7 @@ function AddCourseForm({ onAdded }) {
       <button
         type="submit"
         disabled={saving}
-        className="w-full py-3.5 bg-green-600 text-white font-black text-sm rounded-2xl active:scale-95 disabled:opacity-50 transition-all"
+        className="w-full py-3.5 bg-emerald-500 text-white font-black text-sm rounded-2xl active:scale-95 disabled:opacity-50 transition-all"
       >
         {saving ? 'Adding…' : 'Add Course'}
       </button>
@@ -265,15 +265,15 @@ export default function Courses({ courses, onCoursesChange }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 px-4 pb-6">
+    <div className="min-h-screen bg-slate-950 px-4 pb-6">
       <div className="bg-gradient-to-b from-gray-900 to-gray-950 -mx-4 px-4 pt-8 pb-6 mb-5 text-center">
-        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Golf Scorer</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Golf Scorer</div>
         <h1 className="text-3xl font-black text-white">Courses</h1>
-        <p className="text-xs text-gray-600 mt-1.5">Save courses with par & stroke index for accurate scoring</p>
+        <p className="text-xs text-slate-600 mt-1.5">Save courses with par & stroke index for accurate scoring</p>
       </div>
 
       {courses.length === 0 ? (
-        <div className="text-center py-10 text-gray-700 text-sm mb-5">
+        <div className="text-center py-10 text-slate-700 text-sm mb-5">
           No courses yet — add your first below
         </div>
       ) : (

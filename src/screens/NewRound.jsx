@@ -22,7 +22,7 @@ function StepDots({ current, total }) {
           key={i}
           className={`rounded-full transition-all ${
             i + 1 === current
-              ? 'w-5 h-2 bg-green-500'
+              ? 'w-5 h-2 bg-emerald-500'
               : i + 1 < current
               ? 'w-2 h-2 bg-green-800'
               : 'w-2 h-2 bg-gray-700'
@@ -150,9 +150,9 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
 
   // ── Render steps ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-950 pb-10">
+    <div className="min-h-screen md:min-h-0 bg-slate-950 pb-10 md:rounded-2xl md:overflow-hidden md:shadow-2xl">
       <div className="bg-gradient-to-b from-gray-900 to-gray-950 px-4 pt-6 pb-5 mb-6 flex items-center">
-        <button onClick={onBack} className="w-9 h-9 flex items-center justify-center text-gray-400 active:scale-90 text-xl shrink-0">
+        <button onClick={onBack} className="w-9 h-9 flex items-center justify-center text-slate-400 active:scale-90 text-xl shrink-0">
           ←
         </button>
         <div className="flex-1 text-center">
@@ -169,7 +169,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
         {step === 1 && (
           <>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Format</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Format</label>
               <div className="grid grid-cols-2 gap-2">
                 {FORMATS.map(f => (
                   <button
@@ -178,25 +178,25 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                     onClick={() => setFormat(f.id)}
                     className={`rounded-2xl p-3.5 text-left transition-all active:scale-95 border ${
                       format === f.id
-                        ? 'bg-green-900/40 border-green-600 text-white'
-                        : 'bg-gray-900 border-gray-700 text-gray-400'
+                        ? 'bg-emerald-900/40 border-green-600 text-white'
+                        : 'bg-slate-900 border-slate-700 text-slate-400'
                     }`}
                   >
                     <div className="text-xl mb-1">{f.icon}</div>
                     <div className="font-black text-sm">{f.label}</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{f.desc}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Date</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Date</label>
               <input
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-green-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
           </>
@@ -205,10 +205,10 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
         {/* Step 2: Course */}
         {step === 2 && (
           <>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Select Course</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Select Course</label>
 
             {courses.length === 0 && (
-              <div className="text-xs text-gray-500 bg-gray-900 rounded-2xl p-4 border border-gray-800">
+              <div className="text-xs text-slate-500 bg-slate-900 rounded-2xl p-4 border border-slate-800">
                 No courses in library yet. Enter a name below or add courses in the Courses tab.
               </div>
             )}
@@ -220,28 +220,28 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                 onClick={() => { setSelectedCourse(c); setCustomName('') }}
                 className={`w-full rounded-2xl px-4 py-3 text-left border transition-all active:scale-95 mb-2 ${
                   selectedCourse?.id === c.id
-                    ? 'bg-green-900/40 border-green-600'
-                    : 'bg-gray-900 border-gray-700'
+                    ? 'bg-emerald-900/40 border-green-600'
+                    : 'bg-slate-900 border-slate-700'
                 }`}
               >
                 <div className="font-bold text-white text-sm">{c.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">
+                <div className="text-xs text-slate-500 mt-0.5">
                   {c.total_holes} holes{c.holes?.length ? ' · par/SI set' : ''}
                 </div>
               </button>
             ))}
 
             <div className="mt-3">
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Or enter a course name</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Or enter a course name</div>
               <input
                 type="text"
                 value={customName}
                 onChange={e => { setCustomName(e.target.value); setSelectedCourse(null) }}
                 placeholder="e.g. Royal Birkdale"
-                className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-green-500 placeholder-gray-700"
+                className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-emerald-500 placeholder-gray-700"
               />
               {customName.trim() && (
-                <p className="text-[10px] text-gray-600 mt-1.5 px-1">
+                <p className="text-[10px] text-slate-600 mt-1.5 px-1">
                   A new course with default par will be created. Edit it in the Courses tab to set par & stroke index.
                 </p>
               )}
@@ -253,7 +253,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
         {step === 3 && (
           <>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Players</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Players</label>
               {format === 'match_1v1' && (
                 <span className="text-[10px] text-orange-400 font-bold">Select exactly 2</span>
               )}
@@ -263,7 +263,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
             </div>
 
             {players.length === 0 && (
-              <div className="text-xs text-gray-500 bg-gray-900 rounded-2xl p-4 border border-gray-800">
+              <div className="text-xs text-slate-500 bg-slate-900 rounded-2xl p-4 border border-slate-800">
                 No players set up yet. Go to the Players tab to add your group first.
               </div>
             )}
@@ -274,8 +274,8 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                 return (
                   <div
                     key={p.id}
-                    className={`bg-gray-900 rounded-2xl border transition-all ${
-                      sel?.checked ? 'border-green-700/60' : 'border-gray-800'
+                    className={`bg-slate-900 rounded-2xl border transition-all ${
+                      sel?.checked ? 'border-green-700/60' : 'border-slate-800'
                     }`}
                   >
                     <button
@@ -285,20 +285,20 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                     >
                       <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
                         sel?.checked
-                          ? 'bg-green-600 border-green-600'
-                          : 'border-gray-600 bg-transparent'
+                          ? 'bg-emerald-500 border-green-600'
+                          : 'border-slate-600 bg-transparent'
                       }`}>
                         {sel?.checked && <span className="text-white text-xs font-black">✓</span>}
                       </div>
                       <div className="flex-1 text-left min-w-0">
                         <div className="font-bold text-white text-sm truncate">{p.name}</div>
-                        <div className="text-[10px] text-gray-500">HCP {p.handicap}</div>
+                        <div className="text-[10px] text-slate-500">HCP {p.handicap}</div>
                       </div>
                     </button>
 
                     {sel?.checked && (
                       <div className="px-4 pb-3 pt-0 flex items-center gap-2">
-                        <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Playing HCP</label>
+                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Playing HCP</label>
                         <input
                           type="number"
                           value={sel.hcp}
@@ -306,7 +306,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                           min="0"
                           max="54"
                           step="1"
-                          className="w-20 bg-gray-800 border border-gray-700 text-white text-sm text-center rounded-xl px-2 py-1.5 focus:outline-none focus:border-green-500"
+                          className="w-20 bg-slate-800 border border-slate-700 text-white text-sm text-center rounded-xl px-2 py-1.5 focus:outline-none focus:border-emerald-500"
                         />
                       </div>
                     )}
@@ -320,7 +320,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
         {/* Step 4: Teams (match formats only) */}
         {step === 4 && (
           <>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
               {format === 'match_1v1' ? 'Assign Sides' : 'Assign Teams'}
             </label>
 
@@ -333,7 +333,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                   <div key={p.id} className="text-xs text-white bg-blue-900/30 rounded-xl px-2 py-1 mb-1 border border-blue-800/40">{p.name}</div>
                 ))}
                 {selectedPlayers.filter(p => teams[p.id] === 1).length === 0 && (
-                  <div className="text-xs text-gray-700 italic">None yet</div>
+                  <div className="text-xs text-slate-700 italic">None yet</div>
                 )}
               </div>
               <div className="text-center">
@@ -344,17 +344,17 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                   <div key={p.id} className="text-xs text-white bg-red-900/30 rounded-xl px-2 py-1 mb-1 border border-red-800/40">{p.name}</div>
                 ))}
                 {selectedPlayers.filter(p => teams[p.id] === 2).length === 0 && (
-                  <div className="text-xs text-gray-700 italic">None yet</div>
+                  <div className="text-xs text-slate-700 italic">None yet</div>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
               {selectedPlayers.map(p => (
-                <div key={p.id} className="bg-gray-900 rounded-2xl border border-gray-800 px-4 py-3 flex items-center gap-3">
+                <div key={p.id} className="bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3 flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-white text-sm truncate">{p.name}</div>
-                    <div className="text-[10px] text-gray-500">HCP {selections[p.id]?.hcp}</div>
+                    <div className="text-[10px] text-slate-500">HCP {selections[p.id]?.hcp}</div>
                   </div>
                   <div className="flex gap-1.5 shrink-0">
                     <button
@@ -363,7 +363,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                       className={`px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${
                         teams[p.id] === 1
                           ? 'bg-blue-600 text-white'
-                          : 'bg-gray-800 text-gray-500 border border-gray-700'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700'
                       }`}
                     >
                       {format === 'match_1v1' ? 'A' : 'Team A'}
@@ -374,7 +374,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                       className={`px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-95 ${
                         teams[p.id] === 2
                           ? 'bg-red-600 text-white'
-                          : 'bg-gray-800 text-gray-500 border border-gray-700'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700'
                       }`}
                     >
                       {format === 'match_1v1' ? 'B' : 'Team B'}
@@ -393,7 +393,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
             <button
               type="button"
               onClick={() => { setStep(s => s - 1); setError('') }}
-              className="px-6 py-4 bg-gray-800 text-gray-300 font-bold text-sm rounded-2xl active:scale-95 border border-gray-700"
+              className="px-6 py-4 bg-slate-800 text-gray-300 font-bold text-sm rounded-2xl active:scale-95 border border-slate-700"
             >
               ← Back
             </button>
@@ -402,7 +402,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
             type="button"
             onClick={handleNext}
             disabled={!canAdvance() || saving}
-            className="flex-1 py-4 bg-green-600 text-white font-black text-base rounded-2xl active:scale-95 disabled:opacity-40 transition-all shadow-lg shadow-green-900/30"
+            className="flex-1 py-4 bg-emerald-500 text-white font-black text-base rounded-2xl active:scale-95 disabled:opacity-40 transition-all shadow-lg shadow-emerald-900/30"
           >
             {saving
               ? 'Creating…'

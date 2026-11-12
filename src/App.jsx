@@ -13,6 +13,7 @@ import Scoring          from './screens/Scoring'
 import RoundLeaderboard from './screens/RoundLeaderboard'
 import TripLeaderboard  from './screens/TripLeaderboard'
 import BottomNav        from './components/BottomNav'
+import SideNav          from './components/SideNav'
 
 export default function App() {
   // ── Navigation (LOCAL ONLY — never synced; each device is independent) ──────
@@ -159,15 +160,23 @@ export default function App() {
   }
 
   // ── Derived data for active round ─────────────────────────────────────────
-  const activeCourse  = courses.find(c => c.id === activeRound?.course_id)
-  const courseHoles   = activeCourse?.holes ?? []
+  const activeCourse    = courses.find(c => c.id === activeRound?.course_id)
+  const courseHoles     = activeCourse?.holes ?? []
   const activePlayerIds = new Set(roundPlayers.map(rp => rp.player_id))
-  const activePlayers = players.filter(p => activePlayerIds.has(p.id))
+  const activePlayers   = players.filter(p => activePlayerIds.has(p.id))
+
+  const navProps = {
+    screen,
+    onHome:        goHome,
+    onPlayers:     () => setScreen('players'),
+    onCourses:     () => setScreen('courses'),
+    onLeaderboard: () => setScreen('trip-leaderboard'),
+  }
 
   // ── Loading / error states ────────────────────────────────────────────────
   if (loading) return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-      <div className="text-center text-gray-600">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="text-center text-slate-600">
         <div className="text-4xl mb-3">⛳</div>
         <div className="text-sm">Loading…</div>
       </div>
@@ -175,11 +184,11 @@ export default function App() {
   )
 
   if (error) return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
       <div className="text-center max-w-xs">
         <div className="text-3xl mb-3">⚠️</div>
         <div className="text-red-400 font-bold text-sm mb-2">Connection Error</div>
-        <div className="text-gray-500 text-xs leading-relaxed">{error}</div>
+        <div className="text-slate-500 text-xs leading-relaxed">{error}</div>
       </div>
     </div>
   )
@@ -187,86 +196,86 @@ export default function App() {
   const isFullScreen = screen === 'scoring' || screen === 'round-leaderboard' || screen === 'new-round'
 
   return (
-    <div className="max-w-md mx-auto">
-      {screen === 'home' && (
-        <div className="pb-16">
-          <Home
-            rounds={rounds}
-            courses={courses}
-            onNewRound={() => setScreen('new-round')}
-            onScoring={openScoring}
-            onLeaderboard={openLeaderboard}
-            onDeleteRound={handleDeleteRound}
-          />
+    <div className="min-h-screen bg-slate-950">
+      <SideNav {...navProps} />
+
+      <div className="md:ml-56">
+        <div className="max-w-2xl mx-auto md:px-6 md:py-6">
+
+          {screen === 'home' && (
+            <div className="pb-16 md:pb-6">
+              <Home
+                rounds={rounds}
+                courses={courses}
+                onNewRound={() => setScreen('new-round')}
+                onScoring={openScoring}
+                onLeaderboard={openLeaderboard}
+                onDeleteRound={handleDeleteRound}
+              />
+            </div>
+          )}
+
+          {screen === 'players' && (
+            <div className="pb-16 md:pb-6">
+              <Players players={players} />
+            </div>
+          )}
+
+          {screen === 'courses' && (
+            <div className="pb-16 md:pb-6">
+              <Courses courses={courses} onCoursesChange={setCourses} />
+            </div>
+          )}
+
+          {screen === 'trip-leaderboard' && (
+            <div className="pb-16 md:pb-6">
+              <TripLeaderboard players={players} rounds={rounds} />
+            </div>
+          )}
+
+          {screen === 'new-round' && (
+            <NewRound
+              players={players}
+              courses={courses}
+              onCreated={round => {
+                setRounds(prev => [round, ...prev])
+                openScoring(round)
+              }}
+              onBack={goHome}
+            />
+          )}
+
+          {screen === 'scoring' && (
+            <Scoring
+              round={activeRound}
+              players={activePlayers}
+              roundPlayers={roundPlayers}
+              courseHoles={courseHoles}
+              scores={scores}
+              onBack={goHome}
+              onLeaderboard={() => openLeaderboard(activeRound)}
+              onScoreChange={handleScoreChange}
+              onScoreClear={handleScoreClear}
+            />
+          )}
+
+          {screen === 'round-leaderboard' && (
+            <RoundLeaderboard
+              round={activeRound}
+              players={activePlayers}
+              roundPlayers={roundPlayers}
+              courseHoles={courseHoles}
+              courses={courses}
+              scores={scores}
+              onBack={goHome}
+              onScoring={() => openScoring(activeRound)}
+            />
+          )}
+
         </div>
-      )}
+      </div>
 
-      {screen === 'players' && (
-        <div className="pb-16">
-          <Players players={players} />
-        </div>
-      )}
-
-      {screen === 'courses' && (
-        <div className="pb-16">
-          <Courses courses={courses} onCoursesChange={setCourses} />
-        </div>
-      )}
-
-      {screen === 'trip-leaderboard' && (
-        <div className="pb-16">
-          <TripLeaderboard players={players} rounds={rounds} />
-        </div>
-      )}
-
-      {screen === 'new-round' && (
-        <NewRound
-          players={players}
-          courses={courses}
-          onCreated={round => {
-            setRounds(prev => [round, ...prev])
-            openScoring(round)
-          }}
-          onBack={goHome}
-        />
-      )}
-
-      {screen === 'scoring' && (
-        <Scoring
-          round={activeRound}
-          players={activePlayers}
-          roundPlayers={roundPlayers}
-          courseHoles={courseHoles}
-          scores={scores}
-          onBack={goHome}
-          onLeaderboard={() => openLeaderboard(activeRound)}
-          onScoreChange={handleScoreChange}
-          onScoreClear={handleScoreClear}
-        />
-      )}
-
-      {screen === 'round-leaderboard' && (
-        <RoundLeaderboard
-          round={activeRound}
-          players={activePlayers}
-          roundPlayers={roundPlayers}
-          courseHoles={courseHoles}
-          courses={courses}
-          scores={scores}
-          onBack={goHome}
-          onScoring={() => openScoring(activeRound)}
-        />
-      )}
-
-      {!isFullScreen && (
-        <BottomNav
-          screen={screen}
-          onHome={goHome}
-          onPlayers={() => setScreen('players')}
-          onCourses={() => setScreen('courses')}
-          onLeaderboard={() => setScreen('trip-leaderboard')}
-        />
-      )}
+      {!isFullScreen && <BottomNav {...navProps} />}
     </div>
   )
 }

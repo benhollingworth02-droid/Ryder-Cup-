@@ -22,14 +22,14 @@ function ScoreRow({ player, scores, holeNumber, format, roundPlayer, courseHoles
   const pts = format === 'stableford' ? stablefordPoints(score, par, shots) : null
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-800 last:border-0">
+    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-800 last:border-0">
       {isMatch && roundPlayer?.team && (
         <div className={`w-2 h-2 rounded-full shrink-0 ${TEAM_COLOR[roundPlayer.team] ?? 'bg-gray-600'}`} />
       )}
 
       <div className="flex-1 min-w-0 pr-1">
         <div className="font-bold text-white text-sm truncate leading-tight">{player.name}</div>
-        <div className="text-[10px] text-gray-600 leading-tight flex items-center gap-1">
+        <div className="text-[10px] text-slate-600 leading-tight flex items-center gap-1">
           <span>HCP {roundPlayer?.playing_handicap ?? player.handicap}</span>
           {shots > 0 && <span className="text-green-600">−{shots}</span>}
         </div>
@@ -37,7 +37,7 @@ function ScoreRow({ player, scores, holeNumber, format, roundPlayer, courseHoles
 
       <button
         onClick={() => adjust(-1)}
-        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
+        className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
       >
         −
       </button>
@@ -46,19 +46,19 @@ function ScoreRow({ player, scores, holeNumber, format, roundPlayer, courseHoles
         {score !== null ? (
           <button
             onClick={() => onScoreClear(player.id, holeNumber)}
-            className="text-2xl font-black text-green-400 active:opacity-50 w-full leading-none"
+            className="text-2xl font-black text-emerald-400 active:opacity-50 w-full leading-none"
             title="Tap to clear"
           >
             {score}
           </button>
         ) : (
-          <span className="text-2xl font-black text-gray-700 leading-none">—</span>
+          <span className="text-2xl font-black text-slate-700 leading-none">—</span>
         )}
       </div>
 
       <button
         onClick={() => adjust(+1)}
-        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
+        className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
       >
         +
       </button>
@@ -66,11 +66,11 @@ function ScoreRow({ player, scores, holeNumber, format, roundPlayer, courseHoles
       {format === 'stableford' && (
         <div className="w-10 text-center shrink-0">
           {pts !== null ? (
-            <div className={`text-sm font-black leading-none ${pts >= 2 ? 'text-green-400' : pts === 1 ? 'text-yellow-400' : 'text-gray-600'}`}>
+            <div className={`text-sm font-black leading-none ${pts >= 2 ? 'text-emerald-400' : pts === 1 ? 'text-yellow-400' : 'text-slate-600'}`}>
               {pts}★
             </div>
           ) : (
-            <div className="text-sm text-gray-700">—</div>
+            <div className="text-sm text-slate-700">—</div>
           )}
         </div>
       )}
@@ -124,25 +124,25 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
 
   return (
     <div
-      className="min-h-screen bg-gray-950"
+      className="min-h-screen md:min-h-0 bg-slate-950 md:rounded-2xl md:overflow-hidden md:shadow-2xl"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800">
+      <div className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800">
         <div className="flex items-center px-3 py-3 gap-2">
-          <button onClick={onBack} className="w-9 h-9 flex items-center justify-center text-gray-400 active:scale-90 text-lg shrink-0">
+          <button onClick={onBack} className="w-9 h-9 flex items-center justify-center text-slate-400 active:scale-90 text-lg shrink-0">
             ←
           </button>
           <div className="flex-1 min-w-0 text-center">
             <div className="font-black text-white text-sm leading-tight truncate">{round.course_name ?? dateStr}</div>
-            <div className="text-[10px] text-gray-500">
+            <div className="text-[10px] text-slate-500">
               {dateStr} · {totalHoles} holes
             </div>
           </div>
           <button
             onClick={onLeaderboard}
-            className="w-9 h-9 flex items-center justify-center text-lg text-green-400 active:scale-90 shrink-0"
+            className="w-9 h-9 flex items-center justify-center text-lg text-emerald-400 active:scale-90 shrink-0"
             title="View leaderboard"
           >
             🏆
@@ -163,7 +163,7 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
                 key={h}
                 onClick={() => setHoleNum(h)}
                 className={`shrink-0 w-9 h-9 rounded-xl text-xs font-black transition-all
-                  ${done ? 'bg-green-700 text-white' : partial2 ? 'bg-yellow-700/80 text-white' : 'bg-gray-800 text-gray-500'}
+                  ${done ? 'bg-green-700 text-white' : partial2 ? 'bg-yellow-700/80 text-white' : 'bg-slate-800 text-slate-500'}
                   ${h === holeNum ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-950 scale-110' : 'active:scale-95'}
                 `}
               >
@@ -176,11 +176,11 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
 
       {/* Match status strip */}
       {isMatch && matchStatus && (
-        <div className="mx-4 mt-3 bg-gray-900 rounded-2xl border border-gray-800 px-4 py-2.5 text-center">
+        <div className="mx-4 mt-3 bg-slate-900 rounded-2xl border border-slate-800 px-4 py-2.5 text-center">
           <div className="text-sm font-black text-white">
             {matchStatusText(matchStatus, sideAName, sideBName)}
           </div>
-          <div className="text-[10px] text-gray-500 mt-0.5">
+          <div className="text-[10px] text-slate-500 mt-0.5">
             <span className="text-blue-400">{sideAName}</span>
             {' vs '}
             <span className="text-red-400">{sideBName}</span>
@@ -195,9 +195,9 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
             const rp = roundPlayers.find(r => r.player_id === p.id)
             const pts = calcPlayerStableford(scores, p.id, courseHoles, rp)
             return (
-              <div key={p.id} className="bg-gray-900 rounded-xl px-3 py-1.5 border border-gray-800">
-                <span className="text-xs text-gray-400">{p.name.split(' ')[0]}</span>
-                <span className="text-xs font-black text-green-400 ml-1.5">{pts}★</span>
+              <div key={p.id} className="bg-slate-900 rounded-xl px-3 py-1.5 border border-slate-800">
+                <span className="text-xs text-slate-400">{p.name.split(' ')[0]}</span>
+                <span className="text-xs font-black text-emerald-400 ml-1.5">{pts}★</span>
               </div>
             )
           })}
@@ -213,11 +213,11 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
             const played = holesPlayed(scores, p.id)
             const hcp    = rp?.playing_handicap ?? p.handicap
             return (
-              <div key={p.id} className="bg-gray-900 rounded-xl px-3 py-1.5 border border-gray-800">
-                <span className="text-xs text-gray-400">{p.name.split(' ')[0]}</span>
+              <div key={p.id} className="bg-slate-900 rounded-xl px-3 py-1.5 border border-slate-800">
+                <span className="text-xs text-slate-400">{p.name.split(' ')[0]}</span>
                 {played > 0
-                  ? <span className="text-xs font-black text-green-400 ml-1.5">{gross - hcp}</span>
-                  : <span className="text-xs text-gray-700 ml-1.5">—</span>
+                  ? <span className="text-xs font-black text-emerald-400 ml-1.5">{gross - hcp}</span>
+                  : <span className="text-xs text-slate-700 ml-1.5">—</span>
                 }
               </div>
             )
@@ -230,21 +230,21 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
         <button
           onClick={prevHole}
           disabled={holeNum === 1}
-          className="flex-1 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white font-bold text-sm active:scale-95 disabled:opacity-25 transition-all"
+          className="flex-1 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-sm active:scale-95 disabled:opacity-25 transition-all"
         >
           ← H{Math.max(1, holeNum - 1)}
         </button>
         <div className="text-center px-2 shrink-0">
           <div className="text-3xl font-black text-white leading-none">Hole {holeNum}</div>
-          <div className="text-xs text-gray-600 mt-1">
+          <div className="text-xs text-slate-600 mt-1">
             Par {getHolePar(courseHoles, holeNum)} · SI {getHoleSI(courseHoles, holeNum)}
           </div>
-          <div className="text-[10px] text-gray-700 mt-0.5">{enteredThisHole}/{players.length} entered</div>
+          <div className="text-[10px] text-slate-700 mt-0.5">{enteredThisHole}/{players.length} entered</div>
         </div>
         <button
           onClick={nextHole}
           disabled={holeNum === totalHoles}
-          className="flex-1 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white font-bold text-sm active:scale-95 disabled:opacity-25 transition-all"
+          className="flex-1 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-sm active:scale-95 disabled:opacity-25 transition-all"
         >
           H{Math.min(totalHoles, holeNum + 1)} →
         </button>
@@ -252,11 +252,11 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
 
       {/* Player score rows */}
       {players.length === 0 ? (
-        <div className="text-center py-12 text-gray-600 text-sm px-4">
+        <div className="text-center py-12 text-slate-600 text-sm px-4">
           No players assigned to this round.
         </div>
       ) : (
-        <div className="mx-4 bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
+        <div className="mx-4 bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
           {players.map(player => {
             const rp = roundPlayers.find(r => r.player_id === player.id)
             return (
@@ -280,10 +280,10 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
       {isMatch && (
         <div className="mx-4 mt-2 py-2 text-center">
           {currentHoleResult === null && (
-            <span className="text-xs text-gray-700">Hole {holeNum} — awaiting scores</span>
+            <span className="text-xs text-slate-700">Hole {holeNum} — awaiting scores</span>
           )}
           {currentHoleResult === 'halved' && (
-            <span className="text-xs font-black text-gray-400 bg-gray-800 px-3 py-1 rounded-full">Hole {holeNum} — Halved</span>
+            <span className="text-xs font-black text-slate-400 bg-slate-800 px-3 py-1 rounded-full">Hole {holeNum} — Halved</span>
           )}
           {currentHoleResult === 'a' && (
             <span className="text-xs font-black text-blue-300 bg-blue-900/40 px-3 py-1 rounded-full border border-blue-700/40">
@@ -299,7 +299,7 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
       )}
 
       <div className="px-4 pt-2 pb-6">
-        <p className="text-[10px] text-gray-700 text-center">
+        <p className="text-[10px] text-slate-700 text-center">
           Tap a score to clear it · Swipe to change hole
         </p>
       </div>

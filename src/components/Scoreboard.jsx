@@ -6,16 +6,16 @@ function HoleDot({ result }) {
     result === 'a' ? 'bg-blue-500' :
     result === 'b' ? 'bg-red-500' :
     result === 'halved' ? 'bg-gray-500' :
-    'bg-gray-800'
+    'bg-slate-800'
   return <span className={`inline-block w-2 h-2 rounded-full ${cls}`} />
 }
 
 function SectionHeader({ label }) {
   return (
     <div className="flex items-center gap-3 mb-2 mt-4">
-      <div className="h-px flex-1 bg-gray-800" />
-      <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 whitespace-nowrap">{label}</span>
-      <div className="h-px flex-1 bg-gray-800" />
+      <div className="h-px flex-1 bg-slate-800" />
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">{label}</span>
+      <div className="h-px flex-1 bg-slate-800" />
     </div>
   )
 }
@@ -31,13 +31,13 @@ function MatchRowSimple({ match, state, onPress }) {
   return (
     <button
       onClick={onPress}
-      className="w-full text-left bg-gray-900 rounded-xl border border-gray-800 p-3 active:scale-[0.98] transition-transform"
+      className="w-full text-left bg-slate-900 rounded-xl border border-slate-800 p-3 active:scale-[0.98] transition-transform"
     >
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">{match.name}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{match.name}</span>
         <div className="flex items-center gap-1.5 text-xs font-black">
           <span className="text-blue-400">{fmtPts(a)}</span>
-          <span className="text-gray-600">–</span>
+          <span className="text-slate-600">–</span>
           <span className="text-red-400">{fmtPts(b)}</span>
         </div>
       </div>
@@ -45,11 +45,11 @@ function MatchRowSimple({ match, state, onPress }) {
         <div>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-            <span className="text-xs text-gray-400 truncate max-w-[130px]">{getPlayerNames(match.teamAPlayerIds)}</span>
+            <span className="text-xs text-slate-400 truncate max-w-[130px]">{getPlayerNames(match.teamAPlayerIds)}</span>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-            <span className="text-xs text-gray-400 truncate max-w-[130px]">{getPlayerNames(match.teamBPlayerIds)}</span>
+            <span className="text-xs text-slate-400 truncate max-w-[130px]">{getPlayerNames(match.teamBPlayerIds)}</span>
           </div>
         </div>
         <div className="flex gap-0.5 flex-wrap justify-end max-w-[100px]">
@@ -73,7 +73,7 @@ export default function Scoreboard({ state, ptsA, ptsB, teamA, teamB, onNavigate
   const back9 = state.matches.filter(m => m.section === 'back9')
 
   return (
-    <div className="min-h-screen bg-gray-950 px-4 pb-6">
+    <div className="min-h-screen bg-slate-950 px-4 pb-6">
       {/* Header */}
       <div className="bg-gradient-to-b from-gray-900 to-gray-950 -mx-4 px-4 pt-8 pb-6 mb-4 text-center">
         <div className="text-[10px] font-black uppercase tracking-widest text-yellow-500 mb-1">
@@ -98,7 +98,7 @@ export default function Scoreboard({ state, ptsA, ptsB, teamA, teamB, onNavigate
           <div className="text-xs text-blue-600 mt-1">pts</div>
         </div>
         <div className="flex items-center justify-center px-1">
-          <div className="text-gray-700 font-black text-lg">vs</div>
+          <div className="text-slate-700 font-black text-lg">vs</div>
         </div>
         <div className="flex-1 bg-red-950/60 border border-red-800/50 rounded-2xl p-4 text-center">
           <div className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-1 truncate">
@@ -111,13 +111,13 @@ export default function Scoreboard({ state, ptsA, ptsB, teamA, teamB, onNavigate
 
       {/* Progress bar */}
       <div className="mb-4">
-        <div className="flex justify-between text-[10px] text-gray-600 mb-1">
+        <div className="flex justify-between text-[10px] text-slate-600 mb-1">
           <span className="text-blue-700">{fmtPts(ptsA)} pts</span>
           <span>Need {POINTS_TO_WIN} to win · {holesPlayed} holes played</span>
           <span className="text-red-700">{fmtPts(ptsB)} pts</span>
         </div>
         <div className="relative">
-          <div className="h-3 bg-gray-800 rounded-full overflow-hidden flex">
+          <div className="h-3 bg-slate-800 rounded-full overflow-hidden flex">
             <div
               className="h-full bg-blue-600 transition-all duration-500"
               style={{ width: `${progressA}%` }}
