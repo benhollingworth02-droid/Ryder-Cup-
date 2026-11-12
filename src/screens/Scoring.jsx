@@ -3,6 +3,7 @@ import {
   getScore, holesPlayed, calcGross,
   getHolePar, getHoleSI, shotsReceived, stablefordPoints, calcPlayerStableford,
   calcHoleMatchResult, calcMatchStatus, matchStatusText,
+  getFourballGroupMatchStatus, buildRydercupResult,
 } from '../utils/scoring'
 
 const TEAM_COLOR = { 1: 'bg-blue-500', 2: 'bg-red-500' }
@@ -79,11 +80,26 @@ function ScoreRow({ player, scores, holeNumber, format, roundPlayer, courseHoles
 }
 
 export default function Scoring({ round, players, roundPlayers, courseHoles, scores, onBack, onLeaderboard, onScoreChange, onScoreClear }) {
-  const [holeNum, setHoleNum] = useState(1)
+  const [holeNum, setHoleNum]           = useState(1)
+  const [activeFourball, setActiveFourball] = useState(1)
   const touchStart = useRef(null)
-  const totalHoles = round?.holes ?? 18
-  const format     = round?.format ?? 'stroke'
-  const isMatch    = format === 'match_1v1' || format === 'fourballs'
+  const totalHoles   = round?.holes ?? 18
+  const format       = round?.format ?? 'stroke'
+  const isMatch      = format === 'match_1v1' || format === 'fourballs'
+  const isTournament = format === 'ryder_cup' || format === 'team_stroke'
+  const team1Name    = round?.team1_name ?? 'Team 1'
+  const team2Name    = round?.team2_name ?? 'Team 2'
+
+  // For tournament formats: filter to active fourball
+  const groups = isTournament
+    ? [...new Set(roundPlayers.map(rp => rp.group_num).filter(Boolean))].sort((a, b) => a - b)
+    : []
+  const displayedRPs = isTournament
+    ? roundPlayers.filter(rp => rp.group_num === activeFourball)
+    : roundPlayers
+  const displayedPlayers = isTournament
+    ? players.filter(p => displayedRPs.some(rp => rp.player_id === p.id))
+    : players
 
   function prevHole() { setHoleNum(h => Math.max(1, h - 1)) }
   function nextHole() { setHoleNum(h => Math.min(totalHoles, h + 1)) }
@@ -102,13 +118,11 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
     weekday: 'short', day: 'numeric', month: 'short',
   })
 
-  // Build match status if applicable
+  // Individual match play status
   const holeResults = isMatch
     ? Array.from({ length: totalHoles }, (_, i) => calcHoleMatchResult(i + 1, scores, roundPlayers, courseHoles))
     : null
-
   const matchStatus = isMatch ? calcMatchStatus(holeResults, totalHoles) : null
-
   const teamA = isMatch ? roundPlayers.filter(rp => rp.team === 1) : []
   const teamB = isMatch ? roundPlayers.filter(rp => rp.team === 2) : []
   const sideAName = format === 'match_1v1'
@@ -117,10 +131,40 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
   const sideBName = format === 'match_1v1'
     ? (players.find(p => p.id === teamB[0]?.player_id)?.name ?? 'Side B')
     : 'Team B'
-
   const currentHoleResult = isMatch ? holeResults?.[holeNum - 1] : null
 
-  const enteredThisHole = players.filter(p => getScore(scores, p.id, holeNum) !== null).length
+  // Tournament: per-fourball match status (ryder_cup)
+  const fbMatchStatus = format === 'ryder_cup'
+    ? getFourballGroupMatchStatus(scores, roundPlayers, players, courseHoles, activeFourball, totalHoles)
+    : null
+  const fbHoleResults = format === 'ryder_cup' ? fbMatchStatus?.holeResults : null
+  // Current hole result for active fourball
+  const fbCurrentHoleResult = fbMatchStatus
+    ? (() => {
+        // recalculate per-hole for display
+        const si  = getHoleSI(courseHoles, holeNum)
+        const dRPs = roundPlayers.filter(rp => rp.group_num === activeFourball)
+        const t1 = dRPs.filter(rp => rp.team === 1)
+        const t2 = dRPs.filter(rp => rp.team === 2)
+        const bestNet = (team) => {
+          const nets = team.map(rp => {
+            const s = scores.find(sc => sc.player_id === rp.player_id && sc.hole_number === holeNum)
+            return s ? s.strokes - shotsReceived(si, rp.playing_handicap) : null
+          }).filter(n => n !== null)
+          return nets.length === team.length ? Math.min(...nets) : null
+        }
+        const nA = bestNet(t1), nB = bestNet(t2)
+        if (nA === null || nB === null) return null
+        return nA < nB ? 'a' : nA > nB ? 'b' : 'halved'
+      })()
+    : null
+
+  // Ryder Cup overall score
+  const rydercupResult = format === 'ryder_cup'
+    ? buildRydercupResult(scores, roundPlayers, players, courseHoles, round)
+    : null
+
+  const enteredThisHole = displayedPlayers.filter(p => getScore(scores, p.id, holeNum) !== null).length
 
   return (
     <div
@@ -149,11 +193,30 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
           </button>
         </div>
 
+        {/* Tournament: fourball selector tabs */}
+        {isTournament && groups.length > 1 && (
+          <div className="flex overflow-x-auto px-3 pb-2 gap-1.5 no-scrollbar">
+            {groups.map(g => (
+              <button
+                key={g}
+                onClick={() => setActiveFourball(g)}
+                className={`shrink-0 px-4 py-1.5 rounded-xl text-xs font-black transition-all active:scale-95 ${
+                  activeFourball === g
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}
+              >
+                FB {g}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Hole strip */}
         <div className="flex overflow-x-auto px-3 pb-2.5 gap-1.5 no-scrollbar">
           {Array.from({ length: totalHoles }, (_, i) => i + 1).map(h => {
-            const entered = players.filter(p => getScore(scores, p.id, h) !== null).length
-            const full    = entered === players.length && players.length > 0
+            const entered = displayedPlayers.filter(p => getScore(scores, p.id, h) !== null).length
+            const full    = entered === displayedPlayers.length && displayedPlayers.length > 0
             const partial = entered > 0 && !full
             const result  = isMatch ? holeResults?.[h - 1] : null
             const done    = isMatch ? result !== null : full
@@ -174,7 +237,34 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
         </div>
       </div>
 
-      {/* Match status strip */}
+      {/* Ryder Cup: overall team score banner */}
+      {format === 'ryder_cup' && rydercupResult && (
+        <div className="mx-4 mt-3 bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3">
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center mb-2">Overall Score</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className={`flex-1 text-center ${rydercupResult.team1Points > rydercupResult.team2Points ? 'text-emerald-400' : 'text-slate-400'}`}>
+              <div className="text-2xl font-black leading-none">{rydercupResult.team1Points}</div>
+              <div className="text-[10px] mt-0.5 truncate">{team1Name}</div>
+            </div>
+            <div className="text-slate-700 font-black text-lg">—</div>
+            <div className={`flex-1 text-center ${rydercupResult.team2Points > rydercupResult.team1Points ? 'text-sky-400' : 'text-slate-400'}`}>
+              <div className="text-2xl font-black leading-none">{rydercupResult.team2Points}</div>
+              <div className="text-[10px] mt-0.5 truncate">{team2Name}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tournament (ryder_cup): per-fourball match status */}
+      {format === 'ryder_cup' && fbMatchStatus && (
+        <div className="mx-4 mt-2 bg-slate-900/60 rounded-2xl border border-slate-800 px-4 py-2 text-center">
+          <div className="text-xs font-black text-white">
+            {matchStatusText(fbMatchStatus, team1Name, team2Name)} · FB {activeFourball}
+          </div>
+        </div>
+      )}
+
+      {/* Individual match status strip */}
       {isMatch && matchStatus && (
         <div className="mx-4 mt-3 bg-slate-900 rounded-2xl border border-slate-800 px-4 py-2.5 text-center">
           <div className="text-sm font-black text-white">
@@ -189,10 +279,10 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
       )}
 
       {/* Stableford totals strip */}
-      {format === 'stableford' && players.length > 0 && (
+      {format === 'stableford' && displayedPlayers.length > 0 && (
         <div className="mx-4 mt-3 flex gap-1.5 flex-wrap">
-          {players.map(p => {
-            const rp = roundPlayers.find(r => r.player_id === p.id)
+          {displayedPlayers.map(p => {
+            const rp = displayedRPs.find(r => r.player_id === p.id)
             const pts = calcPlayerStableford(scores, p.id, courseHoles, rp)
             return (
               <div key={p.id} className="bg-slate-900 rounded-xl px-3 py-1.5 border border-slate-800">
@@ -204,17 +294,23 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
         </div>
       )}
 
-      {/* Stroke totals strip */}
-      {format === 'stroke' && players.length > 0 && (
+      {/* Stroke/team_stroke totals strip */}
+      {(format === 'stroke' || format === 'team_stroke') && displayedPlayers.length > 0 && (
         <div className="mx-4 mt-3 flex gap-1.5 flex-wrap">
-          {players.map(p => {
-            const rp     = roundPlayers.find(r => r.player_id === p.id)
+          {displayedPlayers.map(p => {
+            const rp     = displayedRPs.find(r => r.player_id === p.id)
             const gross  = calcGross(scores, p.id)
             const played = holesPlayed(scores, p.id)
             const hcp    = rp?.playing_handicap ?? p.handicap
+            const teamNum = rp?.team
+            const pill = teamNum === 1
+              ? 'border-emerald-800/50 text-emerald-500'
+              : teamNum === 2
+              ? 'border-sky-800/50 text-sky-400'
+              : 'border-slate-800 text-slate-400'
             return (
-              <div key={p.id} className="bg-slate-900 rounded-xl px-3 py-1.5 border border-slate-800">
-                <span className="text-xs text-slate-400">{p.name.split(' ')[0]}</span>
+              <div key={p.id} className={`bg-slate-900 rounded-xl px-3 py-1.5 border ${pill}`}>
+                <span className="text-xs">{p.name.split(' ')[0]}</span>
                 {played > 0
                   ? <span className="text-xs font-black text-emerald-400 ml-1.5">{gross - hcp}</span>
                   : <span className="text-xs text-slate-700 ml-1.5">—</span>
@@ -251,14 +347,14 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
       </div>
 
       {/* Player score rows */}
-      {players.length === 0 ? (
+      {displayedPlayers.length === 0 ? (
         <div className="text-center py-12 text-slate-600 text-sm px-4">
           No players assigned to this round.
         </div>
       ) : (
         <div className="mx-4 bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-          {players.map(player => {
-            const rp = roundPlayers.find(r => r.player_id === player.id)
+          {displayedPlayers.map(player => {
+            const rp = displayedRPs.find(r => r.player_id === player.id)
             return (
               <ScoreRow
                 key={player.id}
@@ -276,7 +372,7 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
         </div>
       )}
 
-      {/* Match hole result chip */}
+      {/* Hole result chip — individual match play */}
       {isMatch && (
         <div className="mx-4 mt-2 py-2 text-center">
           {currentHoleResult === null && (
@@ -293,6 +389,28 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
           {currentHoleResult === 'b' && (
             <span className="text-xs font-black text-red-300 bg-red-900/40 px-3 py-1 rounded-full border border-red-700/40">
               Hole {holeNum} — {sideBName} wins
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Hole result chip — ryder_cup fourball */}
+      {format === 'ryder_cup' && (
+        <div className="mx-4 mt-2 py-2 text-center">
+          {fbCurrentHoleResult === null && (
+            <span className="text-xs text-slate-700">Hole {holeNum} — awaiting all scores</span>
+          )}
+          {fbCurrentHoleResult === 'halved' && (
+            <span className="text-xs font-black text-slate-400 bg-slate-800 px-3 py-1 rounded-full">Hole {holeNum} — Halved</span>
+          )}
+          {fbCurrentHoleResult === 'a' && (
+            <span className="text-xs font-black text-emerald-300 bg-emerald-900/40 px-3 py-1 rounded-full border border-emerald-700/40">
+              Hole {holeNum} — {team1Name} wins
+            </span>
+          )}
+          {fbCurrentHoleResult === 'b' && (
+            <span className="text-xs font-black text-sky-300 bg-sky-900/40 px-3 py-1 rounded-full border border-sky-700/40">
+              Hole {holeNum} — {team2Name} wins
             </span>
           )}
         </div>

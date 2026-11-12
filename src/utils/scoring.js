@@ -156,6 +156,93 @@ export function buildStablefordLeaderboard(scores, players, roundPlayers, course
     })
 }
 
+// ── Tournament helpers ────────────────────────────────────────────────────────
+
+function buildFourballGroupMatchStatus(scores, groupRPs, players, courseHoles, totalHoles) {
+  const team1RPs = groupRPs.filter(rp => rp.team === 1)
+  const team2RPs = groupRPs.filter(rp => rp.team === 2)
+  if (!team1RPs.length || !team2RPs.length) return null
+
+  const holeResults = []
+  for (let h = 1; h <= totalHoles; h++) {
+    const si = getHoleSI(courseHoles, h)
+    const bestNet = (teamRPs) => {
+      const nets = teamRPs.map(rp => {
+        const s = scores.find(sc => sc.player_id === rp.player_id && sc.hole_number === h)
+        return s ? s.strokes - shotsReceived(si, rp.playing_handicap) : null
+      }).filter(n => n !== null)
+      return nets.length === teamRPs.length ? Math.min(...nets) : null
+    }
+    const nA = bestNet(team1RPs)
+    const nB = bestNet(team2RPs)
+    if (nA === null || nB === null) { holeResults.push(null); continue }
+    holeResults.push(nA < nB ? 'a' : nA > nB ? 'b' : 'halved')
+  }
+  return calcMatchStatus(holeResults, totalHoles)
+}
+
+// Match status for one fourball group — used by Scoring.jsx
+export function getFourballGroupMatchStatus(scores, roundPlayers, players, courseHoles, groupNum, totalHoles) {
+  const groupRPs = roundPlayers.filter(rp => rp.group_num === groupNum)
+  return buildFourballGroupMatchStatus(scores, groupRPs, players, courseHoles, totalHoles)
+}
+
+// Ryder Cup: aggregate points across all fourball groups
+export function buildRydercupResult(scores, roundPlayers, players, courseHoles, round) {
+  const groups = [...new Set(roundPlayers.map(rp => rp.group_num).filter(Boolean))].sort((a, b) => a - b)
+  let team1Points = 0, team2Points = 0
+  const fourballs = []
+
+  for (const groupNum of groups) {
+    const groupRPs = roundPlayers.filter(rp => rp.group_num === groupNum)
+    const matchResult = buildFourballGroupMatchStatus(scores, groupRPs, players, courseHoles, round?.holes ?? 18)
+
+    let pts1 = 0, pts2 = 0
+    if (matchResult) {
+      const { aUp, played, remaining, finished } = matchResult
+      const concluded = finished || played === (round?.holes ?? 18)
+      if (concluded) {
+        if (aUp > 0)      { pts1 = 1 }
+        else if (aUp < 0) { pts2 = 1 }
+        else              { pts1 = 0.5; pts2 = 0.5 }
+      }
+    }
+
+    team1Points += pts1
+    team2Points += pts2
+    fourballs.push({ groupNum, matchResult, pts1, pts2 })
+  }
+
+  return { team1Points, team2Points, fourballs }
+}
+
+// Team stroke: aggregate net scores by team
+export function buildTeamStrokeResult(scores, roundPlayers, players) {
+  const getNet = (rp) => {
+    const ps = scores.filter(s => s.player_id === rp.player_id)
+    if (!ps.length) return null
+    return ps.reduce((sum, s) => sum + s.strokes, 0) - rp.playing_handicap
+  }
+
+  const team1RPs = roundPlayers.filter(rp => rp.team === 1)
+  const team2RPs = roundPlayers.filter(rp => rp.team === 2)
+
+  const team1Entries = team1RPs.map(rp => ({
+    player: players.find(p => p.id === rp.player_id),
+    net: getNet(rp), hcp: rp.playing_handicap,
+  })).filter(e => e.player).sort((a, b) => (a.net ?? 999) - (b.net ?? 999))
+
+  const team2Entries = team2RPs.map(rp => ({
+    player: players.find(p => p.id === rp.player_id),
+    net: getNet(rp), hcp: rp.playing_handicap,
+  })).filter(e => e.player).sort((a, b) => (a.net ?? 999) - (b.net ?? 999))
+
+  const team1Total = team1Entries.filter(e => e.net !== null).reduce((s, e) => s + e.net, 0)
+  const team2Total = team2Entries.filter(e => e.net !== null).reduce((s, e) => s + e.net, 0)
+
+  return { team1Total, team2Total, team1Entries, team2Entries }
+}
+
 export function buildTripLeaderboard(allScores, rounds, players, allRoundPlayers) {
   const rp = allRoundPlayers ?? []
   const eligibleRounds = rounds.filter(r => r.format === 'stroke' || r.format === 'stableford' || !r.format)

@@ -25,24 +25,27 @@ create table public.courses (
   created_at  timestamptz default now()
 );
 
--- Rounds (format: stroke | stableford | match_1v1 | fourballs)
+-- Rounds (format: stroke | stableford | match_1v1 | fourballs | ryder_cup | team_stroke)
 create table public.rounds (
   id         uuid     primary key default gen_random_uuid(),
   course_id  uuid     references public.courses(id) on delete set null,
   date       date     not null,
   format     text     not null default 'stroke'
-                      check (format in ('stroke','stableford','match_1v1','fourballs')),
+                      check (format in ('stroke','stableford','match_1v1','fourballs','ryder_cup','team_stroke')),
   holes      smallint not null default 18 check (holes in (9, 18)),
+  team1_name text,    -- team name for ryder_cup / team_stroke formats
+  team2_name text,
   created_at timestamptz default now()
 );
 
--- Which players are in each round (with playing handicap + team for match formats)
+-- Which players are in each round (with playing handicap + team + fourball group)
 create table public.round_players (
   id               uuid     primary key default gen_random_uuid(),
   round_id         uuid     not null references public.rounds(id)   on delete cascade,
   player_id        uuid     not null references public.players(id)  on delete cascade,
   playing_handicap smallint not null default 0,
-  team             smallint,          -- null for stroke/stableford, 1 or 2 for match formats
+  team             smallint,          -- null for stroke/stableford, 1 or 2 for match/tournament formats
+  group_num        smallint,          -- fourball group number (1,2,3...) for ryder_cup/team_stroke
   created_at       timestamptz default now(),
   unique(round_id, player_id)
 );
@@ -108,3 +111,11 @@ alter publication supabase_realtime add table public.courses;
 alter publication supabase_realtime add table public.rounds;
 alter publication supabase_realtime add table public.round_players;
 alter publication supabase_realtime add table public.scores;
+
+-- ── Upgrade existing database (skip if doing a fresh install) ─────────────────
+-- alter table public.rounds add column if not exists team1_name text;
+-- alter table public.rounds add column if not exists team2_name text;
+-- alter table public.rounds drop constraint if exists rounds_format_check;
+-- alter table public.rounds add constraint rounds_format_check
+--   check (format in ('stroke','stableford','match_1v1','fourballs','ryder_cup','team_stroke'));
+-- alter table public.round_players add column if not exists group_num smallint;

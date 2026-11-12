@@ -59,9 +59,12 @@ export async function fetchRounds() {
   return supabase.from('rounds').select('*').order('date', { ascending: false })
 }
 
-export async function createRound(date, courseId, format, holes) {
+export async function createRound(date, courseId, format, holes, team1Name, team2Name) {
   if (!supabase) return { data: null, error: 'Not configured' }
-  return supabase.from('rounds').insert({ date, course_id: courseId, format, holes }).select().single()
+  const row = { date, course_id: courseId, format, holes }
+  if (team1Name) row.team1_name = team1Name
+  if (team2Name) row.team2_name = team2Name
+  return supabase.from('rounds').insert(row).select().single()
 }
 
 export async function deleteRound(id) {
@@ -82,13 +85,14 @@ export async function fetchAllRoundPlayers() {
 }
 
 export async function createRoundPlayers(roundId, players) {
-  // players = [{playerId, playingHandicap, team}]
+  // players = [{playerId, playingHandicap, team, groupNum}]
   if (!supabase) return { error: 'Not configured' }
   const rows = players.map(p => ({
     round_id: roundId,
     player_id: p.playerId,
     playing_handicap: p.playingHandicap,
     team: p.team ?? null,
+    group_num: p.groupNum ?? null,
   }))
   return supabase.from('round_players').insert(rows)
 }
