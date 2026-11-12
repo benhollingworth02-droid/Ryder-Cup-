@@ -58,6 +58,10 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
   })
   const [teams, setTeams]   = useState({})
 
+  // Singles tournament (stroke/stableford with fourballs, no teams)
+  const [splitFourballs, setSplitFourballs] = useState(false)
+  const [fbNumGroups, setFbNumGroups]       = useState(2)
+
   // Tournament player assignments: { playerId: { groupNum, team } }
   const [groupAssignments, setGroupAssignments] = useState({})
   // Per-player hcp overrides for tournament (reuses selections[p.id].hcp)
@@ -93,7 +97,9 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
       if (format === 'fourballs' && selectedPlayers.length !== 4) return false
       return selectedPlayers.every(p => {
         const hcp = parseFloat(selections[p.id]?.hcp)
-        return !isNaN(hcp) && hcp >= 0
+        const hcpOk = !isNaN(hcp) && hcp >= 0
+        if (splitFourballs) return hcpOk && selections[p.id]?.groupNum != null
+        return hcpOk
       })
     }
     if (step === 4) {
@@ -129,6 +135,10 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
       ...prev,
       [playerId]: { ...(prev[playerId] ?? {}), team },
     }))
+  }
+
+  function handleFbGroup(id, groupNum) {
+    setSelections(prev => ({ ...prev, [id]: { ...prev[id], groupNum } }))
   }
 
   function clearAssignment(playerId) {
@@ -188,7 +198,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
           playerId:        p.id,
           playingHandicap: Math.round(parseFloat(selections[p.id]?.hcp) || 0),
           team:            isMatch ? (teams[p.id] ?? null) : null,
-          groupNum:        null,
+          groupNum:        splitFourballs ? (selections[p.id]?.groupNum ?? null) : null,
         }))
       }
 
@@ -308,6 +318,46 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
               </div>
             )}
 
+            {/* Fourballs toggle for individual formats */}
+            {(format === 'stroke' || format === 'stableford') && (
+              <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4">
+                <button
+                  type="button"
+                  onClick={() => setSplitFourballs(v => !v)}
+                  className="w-full flex items-center gap-3 text-left"
+                >
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                    splitFourballs ? 'bg-emerald-500 border-emerald-600' : 'border-slate-600 bg-transparent'
+                  }`}>
+                    {splitFourballs && <span className="text-white text-xs font-black">✓</span>}
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-sm">Split into fourballs</div>
+                    <div className="text-[10px] text-slate-500">Score entry per group · one overall leaderboard</div>
+                  </div>
+                </button>
+                {splitFourballs && (
+                  <div className="mt-3 pt-3 border-t border-slate-800">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Number of Fourballs</div>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setFbNumGroups(n)}
+                          className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all active:scale-95 ${
+                            fbNumGroups === n ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Date</label>
               <input
@@ -415,15 +465,38 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
                     </button>
 
                     {sel?.checked && (
-                      <div className="px-4 pb-3 pt-0 flex items-center gap-2">
-                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Playing HCP</label>
-                        <input
-                          type="number"
-                          value={sel.hcp}
-                          onChange={e => handleHcpChange(p.id, e.target.value)}
-                          min="0" max="54" step="1"
-                          className="w-20 bg-slate-800 border border-slate-700 text-white text-sm text-center rounded-xl px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-                        />
+                      <div className="px-4 pb-3 pt-0 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Playing HCP</label>
+                          <input
+                            type="number"
+                            value={sel.hcp}
+                            onChange={e => handleHcpChange(p.id, e.target.value)}
+                            min="0" max="54" step="1"
+                            className="w-20 bg-slate-800 border border-slate-700 text-white text-sm text-center rounded-xl px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        {splitFourballs && (
+                          <div className="flex items-center gap-2">
+                            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide shrink-0">Fourball</label>
+                            <div className="flex gap-1.5">
+                              {Array.from({ length: fbNumGroups }, (_, i) => i + 1).map(g => (
+                                <button
+                                  key={g}
+                                  type="button"
+                                  onClick={() => handleFbGroup(p.id, g)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 ${
+                                    sel.groupNum === g
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-slate-800 text-slate-500 border border-slate-700'
+                                  }`}
+                                >
+                                  FB{g}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

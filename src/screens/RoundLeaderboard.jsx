@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   buildRoundLeaderboard, buildStablefordLeaderboard,
   calcHoleMatchResult, calcMatchStatus, matchStatusText,
@@ -17,6 +18,8 @@ const FORMAT_LABELS = {
 }
 
 export default function RoundLeaderboard({ round, players, roundPlayers, courseHoles, courses, scores, onBack, onScoring }) {
+  const [lbTab, setLbTab] = useState('match')
+
   const format       = round?.format ?? 'stroke'
   const isMatch      = format === 'match_1v1' || format === 'fourballs'
   const isTournament = format === 'ryder_cup' || format === 'team_stroke'
@@ -47,6 +50,11 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
   const sideBName = format === 'match_1v1'
     ? (players.find(p => p.id === teamB[0]?.player_id)?.name ?? 'Side B')
     : 'Team B'
+
+  // Stroke leaderboard for the match/ryder_cup stroke tab
+  const matchStrokeLb = (format === 'fourballs' || format === 'ryder_cup')
+    ? buildRoundLeaderboard(scores, players, roundPlayers)
+    : null
 
   // Individual leaderboards
   const strokeLb = (!isMatch && !isTournament && format !== 'stableford')
@@ -93,10 +101,29 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
         </div>
       </div>
 
+      {/* Tab switcher for fourballs/ryder_cup */}
+      {(format === 'fourballs' || format === 'ryder_cup') && (
+        <div className="px-4 pt-4">
+          <div className="flex gap-1 p-1 bg-slate-900 rounded-2xl border border-slate-800">
+            {[{ id: 'match', label: 'Match Play' }, { id: 'stroke', label: 'Stroke Play' }].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setLbTab(tab.id)}
+                className={`flex-1 py-2.5 rounded-xl font-black text-sm transition-all active:scale-95 ${
+                  lbTab === tab.id ? 'bg-emerald-500 text-white' : 'text-slate-400'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="px-4 pt-4 pb-10">
 
         {/* Match play result */}
-        {isMatch && matchStatus && (
+        {isMatch && matchStatus && (format === 'match_1v1' || lbTab === 'match') && (
           <div className="mb-4">
             <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 text-center">
               <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Match Result</div>
@@ -238,7 +265,7 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
         )}
 
         {/* Ryder Cup result */}
-        {format === 'ryder_cup' && rydercupResult && (
+        {format === 'ryder_cup' && rydercupResult && lbTab === 'match' && (
           <div>
             {/* Overall team score */}
             <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 mb-4">
@@ -366,6 +393,61 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
               </div>
             ))}
           </div>
+        )}
+
+        {/* Stroke Play tab for fourballs / ryder_cup */}
+        {matchStrokeLb && lbTab === 'stroke' && (
+          matchStrokeLb.every(e => e.net === null) ? (
+            <div className="text-center py-16 text-slate-600 text-sm">
+              <div className="text-4xl mb-3">📋</div>
+              No scores entered yet
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {matchStrokeLb.map((entry, i) => {
+                const ranked = entry.net !== null
+                const rp = roundPlayers.find(rp => rp.player_id === entry.player.id)
+                const fbLabel = rp?.group_num ? `FB${rp.group_num}` : null
+                return (
+                  <div
+                    key={entry.player.id}
+                    className={`rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${
+                      i === 0 && ranked ? 'bg-amber-950/30 border-amber-700/40' :
+                      i === 1 && ranked ? 'bg-slate-800/40 border-slate-600/40' :
+                      i === 2 && ranked ? 'bg-amber-950/20 border-amber-800/30' :
+                      'bg-slate-900 border-slate-800'
+                    }`}
+                  >
+                    <div className="w-9 text-center shrink-0">
+                      {ranked && i < 3
+                        ? <span className="text-xl">{MEDAL[i]}</span>
+                        : <span className={`text-sm font-black ${ranked ? 'text-slate-400' : 'text-slate-700'}`}>
+                            {ranked ? i + 1 : '—'}
+                          </span>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-white text-sm truncate">{entry.player.name}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">
+                        {entry.played} holes · HCP {entry.playingHandicap}
+                        {fbLabel && <span className="ml-1.5 text-slate-600">{fbLabel}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {ranked ? (
+                        <>
+                          <div className="text-2xl font-black text-emerald-400 leading-none">{entry.net}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">Gross {entry.gross}</div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-slate-700">No scores</div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
         )}
 
         <p className="text-[10px] text-slate-700 text-center mt-5">
