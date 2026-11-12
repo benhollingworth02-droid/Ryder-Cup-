@@ -2,8 +2,8 @@ import { useState } from 'react'
 import {
   buildRoundLeaderboard, buildStablefordLeaderboard,
   calcHoleMatchResult, calcMatchStatus, matchStatusText,
-  buildRydercupResult, buildTeamStrokeResult,
-  getFourballGroupMatchStatus,
+  buildRydercupResult,
+  getFourballGroupMatchStatus, buildPairsLeaderboard, buildScrambleLeaderboard,
 } from '../utils/scoring'
 
 const MEDAL = ['🥇', '🥈', '🥉']
@@ -14,7 +14,8 @@ const FORMAT_LABELS = {
   match_1v1:   'Match Play',
   fourballs:   'Fourballs',
   ryder_cup:   'Ryder Cup',
-  team_stroke: 'Team Stroke',
+  team_stroke: 'Pairs Competition',
+  scramble:    'Scramble 2v2',
 }
 
 export default function RoundLeaderboard({ round, players, roundPlayers, courseHoles, courses, scores, onBack, onScoring }) {
@@ -22,7 +23,7 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
 
   const format       = round?.format ?? 'stroke'
   const isMatch      = format === 'match_1v1' || format === 'fourballs'
-  const isTournament = format === 'ryder_cup' || format === 'team_stroke'
+  const isTournament = format === 'ryder_cup' || format === 'team_stroke' || format === 'scramble'
   const totalHoles   = round?.holes ?? 18
   const team1Name    = round?.team1_name ?? 'Team 1'
   const team2Name    = round?.team2_name ?? 'Team 2'
@@ -66,12 +67,16 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
     : null
 
   // Tournament results
-  const rydercupResult  = format === 'ryder_cup'
+  const rydercupResult = format === 'ryder_cup'
     ? buildRydercupResult(scores, roundPlayers, players, courseHoles, round)
     : null
 
-  const teamStrokeResult = format === 'team_stroke'
-    ? buildTeamStrokeResult(scores, roundPlayers, players)
+  const pairsLb   = format === 'team_stroke'
+    ? buildPairsLeaderboard(scores, roundPlayers, players)
+    : null
+
+  const scrambleLb = format === 'scramble'
+    ? buildScrambleLeaderboard(scores, roundPlayers, players)
     : null
 
   // Groups for ryder_cup fourballs
@@ -101,8 +106,8 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
         </div>
       </div>
 
-      {/* Tab switcher for fourballs/ryder_cup */}
-      {(format === 'fourballs' || format === 'ryder_cup') && (
+      {/* Tab switcher for fourballs / ryder_cup / team_stroke */}
+      {(format === 'fourballs' || format === 'ryder_cup' || format === 'team_stroke') && (
         <div className="px-4 pt-4">
           <div className="flex gap-1 p-1 bg-slate-900 rounded-2xl border border-slate-800">
             {[{ id: 'match', label: 'Match Play' }, { id: 'stroke', label: 'Stroke Play' }].map(tab => (
@@ -333,66 +338,139 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
           </div>
         )}
 
-        {/* Team stroke result */}
-        {format === 'team_stroke' && teamStrokeResult && (
-          <div>
-            {/* Team totals */}
-            <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 mb-4">
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center mb-3">Team Totals</div>
-              <div className="flex gap-3">
-                <div className={`flex-1 rounded-xl p-3 text-center ${
-                  teamStrokeResult.team1Total <= teamStrokeResult.team2Total
-                    ? 'bg-emerald-900/30 border border-emerald-800/40'
-                    : 'bg-slate-800 border border-slate-700'
-                }`}>
-                  <div className={`text-3xl font-black leading-none ${teamStrokeResult.team1Total <= teamStrokeResult.team2Total ? 'text-emerald-400' : 'text-slate-400'}`}>
-                    {teamStrokeResult.team1Entries.some(e => e.net !== null) ? teamStrokeResult.team1Total : '—'}
-                  </div>
-                  <div className="text-xs font-black text-slate-300 mt-1">{team1Name}</div>
-                </div>
-                <div className={`flex-1 rounded-xl p-3 text-center ${
-                  teamStrokeResult.team2Total < teamStrokeResult.team1Total
-                    ? 'bg-sky-900/30 border border-sky-800/40'
-                    : 'bg-slate-800 border border-slate-700'
-                }`}>
-                  <div className={`text-3xl font-black leading-none ${teamStrokeResult.team2Total < teamStrokeResult.team1Total ? 'text-sky-400' : 'text-slate-400'}`}>
-                    {teamStrokeResult.team2Entries.some(e => e.net !== null) ? teamStrokeResult.team2Total : '—'}
-                  </div>
-                  <div className="text-xs font-black text-slate-300 mt-1">{team2Name}</div>
-                </div>
+        {/* Pairs Competition: Match tab — per-fourball match results */}
+        {format === 'team_stroke' && lbTab === 'match' && (
+          <div className="space-y-3">
+            {groups.length === 0 && (
+              <div className="text-center py-16 text-slate-600 text-sm">
+                <div className="text-4xl mb-3">📋</div>No fourballs assigned yet
               </div>
-            </div>
-
-            {/* Individual rows grouped by team */}
-            {[
-              { name: team1Name, entries: teamStrokeResult.team1Entries, color: 'text-emerald-500' },
-              { name: team2Name, entries: teamStrokeResult.team2Entries, color: 'text-sky-400' },
-            ].map(({ name, entries, color }) => (
-              <div key={name} className="mb-3">
-                <div className={`text-[10px] font-black uppercase tracking-widest ${color} mb-2 px-1`}>{name}</div>
-                <div className="space-y-1.5">
-                  {entries.map((entry, i) => (
-                    <div key={entry.player.id} className="bg-slate-900 rounded-xl border border-slate-800 px-4 py-2.5 flex items-center gap-3">
-                      <div className="w-5 text-center shrink-0">
-                        {i < 3 ? <span className="text-sm">{MEDAL[i]}</span> : <span className="text-xs text-slate-600">{i + 1}</span>}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-white text-sm truncate">{entry.player.name}</div>
-                        <div className="text-[10px] text-slate-500">HCP {entry.hcp}</div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {entry.net !== null ? (
-                          <div className="text-xl font-black text-emerald-400 leading-none">{entry.net}</div>
-                        ) : (
-                          <div className="text-sm text-slate-700">No scores</div>
-                        )}
-                      </div>
+            )}
+            {groups.map(groupNum => {
+              const groupRPs  = roundPlayers.filter(rp => rp.group_num === groupNum)
+              const t1Players = groupRPs.filter(rp => rp.team === 1).map(rp => players.find(p => p.id === rp.player_id)).filter(Boolean)
+              const t2Players = groupRPs.filter(rp => rp.team === 2).map(rp => players.find(p => p.id === rp.player_id)).filter(Boolean)
+              const ms = getFourballGroupMatchStatus(scores, roundPlayers, players, courseHoles, groupNum, totalHoles)
+              return (
+                <div key={groupNum} className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+                    <div className="text-xs font-black text-slate-400">Fourball {groupNum}</div>
+                    {ms && ms.played > 0 ? (
+                      <div className="text-xs font-bold text-slate-300">{matchStatusText(ms, team1Name, team2Name)}</div>
+                    ) : (
+                      <div className="text-xs text-slate-700">In progress</div>
+                    )}
+                  </div>
+                  <div className="px-4 py-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-[10px] text-emerald-500 font-bold mb-1">{team1Name}</div>
+                      {t1Players.map(p => <div key={p.id} className="text-xs text-white truncate">{p.name}</div>)}
                     </div>
-                  ))}
+                    <div>
+                      <div className="text-[10px] text-sky-400 font-bold mb-1">{team2Name}</div>
+                      {t2Players.map(p => <div key={p.id} className="text-xs text-white truncate">{p.name}</div>)}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
+        )}
+
+        {/* Pairs Competition: Stroke tab — pairs combined net leaderboard */}
+        {format === 'team_stroke' && lbTab === 'stroke' && pairsLb && (
+          pairsLb.every(e => e.combinedNet === null) ? (
+            <div className="text-center py-16 text-slate-600 text-sm">
+              <div className="text-4xl mb-3">📋</div>No scores entered yet
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {pairsLb.map((entry, i) => {
+                const ranked = entry.combinedNet !== null
+                const pairNames = entry.members.map(m => m.player.name.split(' ')[0]).join(' & ')
+                return (
+                  <div
+                    key={`${entry.groupNum}-${entry.teamNum}`}
+                    className={`rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${
+                      i === 0 && ranked ? 'bg-amber-950/30 border-amber-700/40' :
+                      i === 1 && ranked ? 'bg-slate-800/40 border-slate-600/40' :
+                      i === 2 && ranked ? 'bg-amber-950/20 border-amber-800/30' :
+                      'bg-slate-900 border-slate-800'
+                    }`}
+                  >
+                    <div className="w-9 text-center shrink-0">
+                      {ranked && i < 3
+                        ? <span className="text-xl">{MEDAL[i]}</span>
+                        : <span className={`text-sm font-black ${ranked ? 'text-slate-400' : 'text-slate-700'}`}>{ranked ? i + 1 : '—'}</span>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-white text-sm truncate">{pairNames}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">FB{entry.groupNum}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {ranked ? (
+                        <>
+                          <div className="text-2xl font-black text-emerald-400 leading-none">{entry.combinedNet}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">combined net</div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-slate-700">No scores</div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        )}
+
+        {/* Scramble leaderboard */}
+        {format === 'scramble' && scrambleLb && (
+          scrambleLb.every(e => e.net === null) ? (
+            <div className="text-center py-16 text-slate-600 text-sm">
+              <div className="text-4xl mb-3">📋</div>No scores entered yet
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {scrambleLb.map((entry, i) => {
+                const ranked = entry.net !== null
+                const pairNames = entry.members.map(m => m.player.name.split(' ')[0]).join(' & ')
+                return (
+                  <div
+                    key={`${entry.groupNum}-${entry.teamNum}`}
+                    className={`rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${
+                      i === 0 && ranked ? 'bg-amber-950/30 border-amber-700/40' :
+                      i === 1 && ranked ? 'bg-slate-800/40 border-slate-600/40' :
+                      i === 2 && ranked ? 'bg-amber-950/20 border-amber-800/30' :
+                      'bg-slate-900 border-slate-800'
+                    }`}
+                  >
+                    <div className="w-9 text-center shrink-0">
+                      {ranked && i < 3
+                        ? <span className="text-xl">{MEDAL[i]}</span>
+                        : <span className={`text-sm font-black ${ranked ? 'text-slate-400' : 'text-slate-700'}`}>{ranked ? i + 1 : '—'}</span>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-white text-sm truncate">{pairNames}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">FB{entry.groupNum} · Team HCP {entry.teamHcp}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {ranked ? (
+                        <>
+                          <div className="text-2xl font-black text-emerald-400 leading-none">{entry.net}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">Gross {entry.gross}</div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-slate-700">No scores</div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
         )}
 
         {/* Stroke Play tab for fourballs / ryder_cup */}
@@ -453,7 +531,8 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
         <p className="text-[10px] text-slate-700 text-center mt-5">
           {format === 'stableford' ? 'Higher points wins' :
            format === 'ryder_cup' ? 'Win=1pt · Halve=0.5pt · Lose=0pt per fourball' :
-           format === 'team_stroke' ? 'Net = gross − playing handicap · lower wins' :
+           format === 'team_stroke' ? 'Match: net score per hole · Stroke: combined net per pair' :
+           format === 'scramble' ? 'Team HCP = 60% low + 40% high · lowest net wins' :
            isMatch ? 'Net score per hole · handicap from stroke index' :
            'Net = gross − playing handicap · lower wins'}
         </p>

@@ -9,8 +9,9 @@ const INDIVIDUAL_FORMATS = [
 ]
 
 const TOURNAMENT_FORMATS = [
-  { id: 'ryder_cup',   label: 'Ryder Cup',        desc: 'Teams · fourballs · match play points', icon: '🏆' },
-  { id: 'team_stroke', label: 'Team Stroke Play',  desc: 'Teams · individual scores · team total', icon: '🤝' },
+  { id: 'ryder_cup',   label: 'Ryder Cup',         desc: 'Teams · fourballs · match play points',       icon: '🏆' },
+  { id: 'team_stroke', label: 'Pairs Competition',  desc: 'Best ball match play + pairs stroke leaderboard', icon: '🤝' },
+  { id: 'scramble',    label: 'Scramble 2v2',       desc: 'One team score per hole · lowest net wins',   icon: '🎯' },
 ]
 
 function defaultHoles(total) {
@@ -69,7 +70,7 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
-  const isTournament = format === 'ryder_cup' || format === 'team_stroke'
+  const isTournament = format === 'ryder_cup' || format === 'team_stroke' || format === 'scramble'
   const isMatch      = format === 'match_1v1' || format === 'fourballs'
   const totalSteps   = isMatch ? 4 : 3
 
@@ -139,6 +140,25 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
 
   function handleFbGroup(id, groupNum) {
     setSelections(prev => ({ ...prev, [id]: { ...prev[id], groupNum } }))
+  }
+
+  function handleAutoPair() {
+    const sorted = [...players].sort((a, b) => {
+      const ha = parseFloat(selections[a.id]?.hcp ?? a.handicap) || 0
+      const hb = parseFloat(selections[b.id]?.hcp ?? b.handicap) || 0
+      return ha - hb
+    })
+    const n = sorted.length
+    const newAssignments = {}
+    for (let i = 0; i < n; i++) {
+      const pairIdx = Math.min(i, n - 1 - i)
+      const fb   = Math.floor(pairIdx / 2) + 1
+      const team = (pairIdx % 2) + 1
+      newAssignments[sorted[i].id] = { groupNum: fb, team }
+    }
+    setGroupAssignments(newAssignments)
+    const maxFb = Math.max(...Object.values(newAssignments).map(a => a.groupNum))
+    if (maxFb > 0) setNumGroups(maxFb)
   }
 
   function clearAssignment(playerId) {
@@ -515,6 +535,16 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
             <div className="text-xs text-slate-600 mb-4">
               For each player: pick their fourball (FB) and team
             </div>
+
+            {(format === 'team_stroke' || format === 'scramble') && (
+              <button
+                type="button"
+                onClick={handleAutoPair}
+                className="w-full py-3 bg-amber-900/40 border border-amber-600/40 text-amber-400 font-black text-sm rounded-2xl active:scale-95 mb-4"
+              >
+                ⚡ Auto-pair by handicap
+              </button>
+            )}
 
             {players.length === 0 && (
               <div className="text-xs text-slate-500 bg-slate-900 rounded-2xl p-4 border border-slate-800">

@@ -25,13 +25,13 @@ create table public.courses (
   created_at  timestamptz default now()
 );
 
--- Rounds (format: stroke | stableford | match_1v1 | fourballs | ryder_cup | team_stroke)
+-- Rounds (format: stroke | stableford | match_1v1 | fourballs | ryder_cup | team_stroke | scramble)
 create table public.rounds (
   id         uuid     primary key default gen_random_uuid(),
   course_id  uuid     references public.courses(id) on delete set null,
   date       date     not null,
   format     text     not null default 'stroke'
-                      check (format in ('stroke','stableford','match_1v1','fourballs','ryder_cup','team_stroke')),
+                      check (format in ('stroke','stableford','match_1v1','fourballs','ryder_cup','team_stroke','scramble')),
   holes      smallint not null default 18 check (holes in (9, 18)),
   team1_name text,    -- team name for ryder_cup / team_stroke formats
   team2_name text,
@@ -117,5 +117,5 @@ alter publication supabase_realtime add table public.scores;
 -- alter table public.rounds add column if not exists team2_name text;
 -- alter table public.rounds drop constraint if exists rounds_format_check;
 -- alter table public.rounds add constraint rounds_format_check
---   check (format in ('stroke','stableford','match_1v1','fourballs','ryder_cup','team_stroke'));
+--   check (format in ('stroke','stableford','match_1v1','fourballs','ryder_cup','team_stroke','scramble'));
 -- alter table public.round_players add column if not exists group_num smallint;

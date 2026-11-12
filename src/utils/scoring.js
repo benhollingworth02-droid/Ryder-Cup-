@@ -243,6 +243,71 @@ export function buildTeamStrokeResult(scores, roundPlayers, players) {
   return { team1Total, team2Total, team1Entries, team2Entries }
 }
 
+// Scramble team handicap: 0.6 × lower + 0.4 × higher
+export function scrambleTeamHcp(hcpA, hcpB) {
+  const lo = Math.min(hcpA, hcpB)
+  const hi = Math.max(hcpA, hcpB)
+  return Math.round(0.6 * lo + 0.4 * hi)
+}
+
+// Pairs Competition: each pair's combined net (gross1−hcp1 + gross2−hcp2), ranked ascending
+export function buildPairsLeaderboard(scores, roundPlayers, players) {
+  const groups = [...new Set(roundPlayers.map(rp => rp.group_num).filter(Boolean))].sort((a, b) => a - b)
+  const entries = groups.flatMap(groupNum => {
+    const groupRPs = roundPlayers.filter(rp => rp.group_num === groupNum)
+    return [1, 2].map(teamNum => {
+      const teamRPs = groupRPs.filter(rp => rp.team === teamNum)
+      if (!teamRPs.length) return null
+      const members = teamRPs
+        .map(rp => ({ player: players.find(p => p.id === rp.player_id), hcp: rp.playing_handicap }))
+        .filter(m => m.player)
+      const hasScores = members.some(m => scores.some(s => s.player_id === m.player.id))
+      const combinedNet = hasScores
+        ? members.reduce((sum, m) => {
+            const gross = scores.filter(s => s.player_id === m.player.id).reduce((a, s) => a + s.strokes, 0)
+            return sum + gross - m.hcp
+          }, 0)
+        : null
+      return { members, combinedNet, groupNum, teamNum }
+    }).filter(Boolean)
+  })
+  return entries.sort((a, b) => {
+    if (a.combinedNet === null && b.combinedNet === null) return 0
+    if (a.combinedNet === null) return 1
+    if (b.combinedNet === null) return -1
+    return a.combinedNet - b.combinedNet
+  })
+}
+
+// Scramble: team gross (from first player's scores) minus team handicap, ranked ascending
+export function buildScrambleLeaderboard(scores, roundPlayers, players) {
+  const groups = [...new Set(roundPlayers.map(rp => rp.group_num).filter(Boolean))].sort((a, b) => a - b)
+  const entries = groups.flatMap(groupNum => {
+    const groupRPs = roundPlayers.filter(rp => rp.group_num === groupNum)
+    return [1, 2].map(teamNum => {
+      const teamRPs = groupRPs.filter(rp => rp.team === teamNum)
+      if (!teamRPs.length) return null
+      const members = teamRPs
+        .map(rp => ({ player: players.find(p => p.id === rp.player_id), hcp: rp.playing_handicap }))
+        .filter(m => m.player)
+      const hcps = members.map(m => m.hcp)
+      const teamHcp = hcps.length >= 2 ? scrambleTeamHcp(hcps[0], hcps[1]) : (hcps[0] ?? 0)
+      const firstRpId = teamRPs[0]?.player_id
+      const teamScores = firstRpId ? scores.filter(s => s.player_id === firstRpId) : []
+      const gross = teamScores.reduce((sum, s) => sum + s.strokes, 0)
+      const played = teamScores.length
+      const net = played > 0 ? gross - teamHcp : null
+      return { members, gross, teamHcp, net, played, groupNum, teamNum }
+    }).filter(Boolean)
+  })
+  return entries.sort((a, b) => {
+    if (a.net === null && b.net === null) return 0
+    if (a.net === null) return 1
+    if (b.net === null) return -1
+    return a.net - b.net
+  })
+}
+
 export function buildTripLeaderboard(allScores, rounds, players, allRoundPlayers) {
   const rp = allRoundPlayers ?? []
   const eligibleRounds = rounds.filter(r => r.format === 'stroke' || r.format === 'stableford' || !r.format)

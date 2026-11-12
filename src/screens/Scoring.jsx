@@ -79,6 +79,64 @@ function ScoreRow({ player, scores, holeNumber, format, roundPlayer, courseHoles
   )
 }
 
+function ScramblePairRow({ teamRPs, players, scores, holeNumber, courseHoles, onScoreChange, onScoreClear, teamNum }) {
+  const player1 = players.find(p => p.id === teamRPs[0]?.player_id)
+  const player2 = players.find(p => p.id === teamRPs[1]?.player_id)
+  if (!player1) return null
+
+  const score = getScore(scores, player1.id, holeNumber)
+  const par   = getHolePar(courseHoles, holeNumber)
+  const hcpA  = teamRPs[0]?.playing_handicap ?? 0
+  const hcpB  = teamRPs[1]?.playing_handicap ?? hcpA
+  const lo    = Math.min(hcpA, hcpB)
+  const hi    = Math.max(hcpA, hcpB)
+  const teamHcp = teamRPs.length >= 2 ? Math.round(0.6 * lo + 0.4 * hi) : hcpA
+
+  function adjust(delta) {
+    const next = score === null ? par : Math.max(1, score + delta)
+    teamRPs.forEach(rp => onScoreChange(rp.player_id, holeNumber, next))
+  }
+  function clear() {
+    teamRPs.forEach(rp => onScoreClear(rp.player_id, holeNumber))
+  }
+
+  const color = teamNum === 1 ? 'text-emerald-400' : 'text-sky-400'
+  const dot   = teamNum === 1 ? 'bg-emerald-500' : 'bg-sky-500'
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-3 border-b border-slate-800 last:border-0">
+      <div className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+      <div className="flex-1 min-w-0 pr-1">
+        <div className={`font-bold text-sm truncate leading-tight ${color}`}>
+          {player1.name}{player2 ? ` & ${player2.name}` : ''}
+        </div>
+        <div className="text-[10px] text-slate-600 leading-tight">Team HCP {teamHcp}</div>
+      </div>
+      <button
+        onClick={() => adjust(-1)}
+        className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
+      >
+        −
+      </button>
+      <div className="w-10 text-center shrink-0">
+        {score !== null ? (
+          <button onClick={clear} className="text-2xl font-black text-emerald-400 active:opacity-50 w-full leading-none" title="Tap to clear">
+            {score}
+          </button>
+        ) : (
+          <span className="text-2xl font-black text-slate-700 leading-none">—</span>
+        )}
+      </div>
+      <button
+        onClick={() => adjust(+1)}
+        className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
 export default function Scoring({ round, players, roundPlayers, courseHoles, scores, onBack, onLeaderboard, onScoreChange, onScoreClear }) {
   const [holeNum, setHoleNum]           = useState(1)
   const [activeFourball, setActiveFourball] = useState(1)
@@ -86,7 +144,7 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
   const totalHoles   = round?.holes ?? 18
   const format       = round?.format ?? 'stroke'
   const isMatch      = format === 'match_1v1' || format === 'fourballs'
-  const isTournament = format === 'ryder_cup' || format === 'team_stroke'
+  const isTournament = format === 'ryder_cup' || format === 'team_stroke' || format === 'scramble'
   const team1Name    = round?.team1_name ?? 'Team 1'
   const team2Name    = round?.team2_name ?? 'Team 2'
 
@@ -133,11 +191,11 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
     : 'Team B'
   const currentHoleResult = isMatch ? holeResults?.[holeNum - 1] : null
 
-  // Tournament: per-fourball match status (ryder_cup)
-  const fbMatchStatus = format === 'ryder_cup'
+  // Tournament: per-fourball match status (ryder_cup / team_stroke)
+  const fbMatchStatus = (format === 'ryder_cup' || format === 'team_stroke')
     ? getFourballGroupMatchStatus(scores, roundPlayers, players, courseHoles, activeFourball, totalHoles)
     : null
-  const fbHoleResults = format === 'ryder_cup' ? fbMatchStatus?.holeResults : null
+  const fbHoleResults = (format === 'ryder_cup' || format === 'team_stroke') ? fbMatchStatus?.holeResults : null
   // Current hole result for active fourball
   const fbCurrentHoleResult = fbMatchStatus
     ? (() => {
@@ -321,6 +379,33 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
         </div>
       )}
 
+      {/* Scramble totals strip */}
+      {format === 'scramble' && displayedPlayers.length > 0 && (
+        <div className="mx-4 mt-3 flex gap-1.5 flex-wrap">
+          {[1, 2].map(teamNum => {
+            const teamRPs = displayedRPs.filter(rp => rp.team === teamNum)
+            if (!teamRPs.length) return null
+            const hcpA = teamRPs[0]?.playing_handicap ?? 0
+            const hcpB = teamRPs[1]?.playing_handicap ?? hcpA
+            const teamHcp = teamRPs.length >= 2 ? Math.round(0.6 * Math.min(hcpA, hcpB) + 0.4 * Math.max(hcpA, hcpB)) : hcpA
+            const firstId = teamRPs[0]?.player_id
+            const gross   = firstId ? calcGross(scores, firstId) : 0
+            const played  = firstId ? holesPlayed(scores, firstId) : 0
+            const pill    = teamNum === 1 ? 'border-emerald-800/50' : 'border-sky-800/50'
+            const val     = teamNum === 1 ? 'text-emerald-400' : 'text-sky-400'
+            return (
+              <div key={teamNum} className={`bg-slate-900 rounded-xl px-3 py-1.5 border ${pill}`}>
+                <span className="text-xs text-slate-400">Team {teamNum}</span>
+                {played > 0
+                  ? <span className={`text-xs font-black ml-1.5 ${val}`}>{gross - teamHcp}</span>
+                  : <span className="text-xs text-slate-700 ml-1.5">—</span>
+                }
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Hole navigation */}
       <div className="flex items-center gap-2 px-4 py-3">
         <button
@@ -350,6 +435,26 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
       {displayedPlayers.length === 0 ? (
         <div className="text-center py-12 text-slate-600 text-sm px-4">
           No players assigned to this round.
+        </div>
+      ) : format === 'scramble' ? (
+        <div className="mx-4 bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          {[1, 2].map(teamNum => {
+            const teamRPs = displayedRPs.filter(rp => rp.team === teamNum)
+            if (!teamRPs.length) return null
+            return (
+              <ScramblePairRow
+                key={teamNum}
+                teamRPs={teamRPs}
+                players={players}
+                scores={scores}
+                holeNumber={holeNum}
+                courseHoles={courseHoles}
+                onScoreChange={onScoreChange}
+                onScoreClear={onScoreClear}
+                teamNum={teamNum}
+              />
+            )
+          })}
         </div>
       ) : (
         <div className="mx-4 bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
@@ -394,8 +499,8 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
         </div>
       )}
 
-      {/* Hole result chip — ryder_cup fourball */}
-      {format === 'ryder_cup' && (
+      {/* Hole result chip — ryder_cup / team_stroke fourball */}
+      {(format === 'ryder_cup' || format === 'team_stroke') && (
         <div className="mx-4 mt-2 py-2 text-center">
           {fbCurrentHoleResult === null && (
             <span className="text-xs text-slate-700">Hole {holeNum} — awaiting all scores</span>
