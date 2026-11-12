@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { createCourse, createRound, createRoundPlayers } from '../lib/supabase'
 
 const INDIVIDUAL_FORMATS = [
-  { id: 'stroke',     label: 'Stroke Play',  desc: 'Individual · gross minus handicap', icon: '🏌️' },
-  { id: 'stableford', label: 'Stableford',   desc: 'Individual · points per hole',      icon: '⭐' },
-  { id: 'match_1v1',  label: 'Match Play',   desc: '1 vs 1 · net score per hole',       icon: '⚔️' },
-  { id: 'fourballs',  label: 'Fourballs',    desc: '2 vs 2 · best ball per hole',       icon: '👥' },
+  { id: 'stroke',      label: 'Stroke Play',       desc: 'Individual · gross minus handicap',         icon: '🏌️' },
+  { id: 'stableford',  label: 'Stableford',        desc: 'Individual · points per hole',              icon: '⭐' },
+  { id: 'match_1v1',   label: 'Match Play',        desc: '1 vs 1 · net score per hole',              icon: '⚔️' },
+  { id: 'fourballs',   label: 'Fourballs',         desc: '2 vs 2 · best ball per hole',              icon: '👥' },
+  { id: 'match_3ball', label: 'Match Play 3-Ball', desc: '3 players · each plays the other two',     icon: '🎱' },
 ]
 
 const TOURNAMENT_FORMATS = [
@@ -94,8 +95,9 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
         return true
       }
       if (selectedPlayers.length === 0) return false
-      if (format === 'match_1v1' && selectedPlayers.length !== 2) return false
-      if (format === 'fourballs' && selectedPlayers.length !== 4) return false
+      if (format === 'match_1v1'   && selectedPlayers.length !== 2) return false
+      if (format === 'fourballs'   && selectedPlayers.length !== 4) return false
+      if (format === 'match_3ball' && selectedPlayers.length !== 3) return false
       return selectedPlayers.every(p => {
         const hcp = parseFloat(selections[p.id]?.hcp)
         const hcpOk = !isNaN(hcp) && hcp >= 0
@@ -447,6 +449,9 @@ export default function NewRound({ players, courses, onCreated, onBack }) {
               )}
               {format === 'fourballs' && (
                 <span className="text-[10px] text-orange-400 font-bold">Select exactly 4</span>
+              )}
+              {format === 'match_3ball' && (
+                <span className="text-[10px] text-orange-400 font-bold">Select exactly 3</span>
               )}
             </div>
 

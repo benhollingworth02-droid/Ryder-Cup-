@@ -308,6 +308,34 @@ export function buildScrambleLeaderboard(scores, roundPlayers, players) {
   })
 }
 
+// 3-ball match play: 3 concurrent matches (A vs B, A vs C, B vs C)
+export function buildThreeBallResult(scores, roundPlayers, players, courseHoles, totalHoles) {
+  const roundIds  = roundPlayers.map(rp => rp.player_id)
+  const rPlayers  = players.filter(p => roundIds.includes(p.id))
+  if (rPlayers.length < 3) return []
+  const [pA, pB, pC] = rPlayers
+  const pairings = [[pA, pB], [pA, pC], [pB, pC]]
+  return pairings.map(([p1, p2]) => {
+    const rp1 = roundPlayers.find(rp => rp.player_id === p1.id)
+    const rp2 = roundPlayers.find(rp => rp.player_id === p2.id)
+    const hcp1 = rp1?.playing_handicap ?? p1.handicap
+    const hcp2 = rp2?.playing_handicap ?? p2.handicap
+    const holeResults = []
+    for (let h = 1; h <= totalHoles; h++) {
+      const s1 = scores.find(s => s.player_id === p1.id && s.hole_number === h)
+      const s2 = scores.find(s => s.player_id === p2.id && s.hole_number === h)
+      const si     = getHoleSI(courseHoles, h)
+      const shots1 = shotsReceived(si, hcp1)
+      const shots2 = shotsReceived(si, hcp2)
+      if (!s1 || !s2) { holeResults.push(null); continue }
+      const net1 = s1.strokes - shots1
+      const net2 = s2.strokes - shots2
+      holeResults.push(net1 < net2 ? 'a' : net1 > net2 ? 'b' : 'halved')
+    }
+    return { ...calcMatchStatus(holeResults, totalHoles), player1: p1, player2: p2 }
+  })
+}
+
 export function buildTripLeaderboard(allScores, rounds, players, allRoundPlayers) {
   const rp = allRoundPlayers ?? []
   const eligibleRounds = rounds.filter(r => r.format === 'stroke' || r.format === 'stableford' || !r.format)

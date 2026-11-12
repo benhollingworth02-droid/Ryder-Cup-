@@ -4,18 +4,20 @@ import {
   calcHoleMatchResult, calcMatchStatus, matchStatusText,
   buildRydercupResult,
   getFourballGroupMatchStatus, buildPairsLeaderboard, buildScrambleLeaderboard,
+  buildThreeBallResult,
 } from '../utils/scoring'
 
 const MEDAL = ['🥇', '🥈', '🥉']
 
 const FORMAT_LABELS = {
-  stroke:      'Stroke Play',
-  stableford:  'Stableford',
-  match_1v1:   'Match Play',
-  fourballs:   'Fourballs',
-  ryder_cup:   'Ryder Cup',
-  team_stroke: 'Pairs Competition',
-  scramble:    'Scramble 2v2',
+  stroke:       'Stroke Play',
+  stableford:   'Stableford',
+  match_1v1:    'Match Play',
+  fourballs:    'Fourballs',
+  ryder_cup:    'Ryder Cup',
+  team_stroke:  'Pairs Competition',
+  scramble:     'Scramble 2v2',
+  match_3ball:  'Match Play 3-Ball',
 }
 
 export default function RoundLeaderboard({ round, players, roundPlayers, courseHoles, courses, scores, onBack, onScoring }) {
@@ -77,6 +79,11 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
 
   const scrambleLb = format === 'scramble'
     ? buildScrambleLeaderboard(scores, roundPlayers, players)
+    : null
+
+  // 3-ball match play
+  const threeBallMatches = format === 'match_3ball'
+    ? buildThreeBallResult(scores, roundPlayers, players, courseHoles, totalHoles)
     : null
 
   // Groups for ryder_cup fourballs
@@ -528,11 +535,103 @@ export default function RoundLeaderboard({ round, players, roundPlayers, courseH
           )
         )}
 
+        {/* 3-ball match play leaderboard */}
+        {format === 'match_3ball' && threeBallMatches && (
+          <div>
+            <div className="space-y-3 mb-4">
+              {threeBallMatches.map((m, i) => {
+                const n1 = m.player1.name.split(' ')[0]
+                const n2 = m.player2.name.split(' ')[0]
+                return (
+                  <div key={i} className="bg-slate-900 rounded-2xl border border-slate-800 p-4 text-center">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+                      {m.player1.name} vs {m.player2.name}
+                    </div>
+                    <div className="text-lg font-black text-white mb-1">
+                      {matchStatusText(m, n1, n2)}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {m.played} hole{m.played !== 1 ? 's' : ''} played
+                      {m.remaining > 0 && !m.finished ? ` · ${m.remaining} to play` : ''}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Overall standings */}
+            {(() => {
+              const roundIds = roundPlayers.map(rp => rp.player_id)
+              const rPlayers = players.filter(p => roundIds.includes(p.id))
+              const standings = rPlayers.map(p => {
+                let wins = 0, halves = 0, losses = 0
+                threeBallMatches.forEach(m => {
+                  const isP1 = m.player1.id === p.id
+                  const isP2 = m.player2.id === p.id
+                  if (!isP1 && !isP2) return
+                  if (!m.finished && m.played < totalHoles) return
+                  if (m.aUp === 0) { halves++ }
+                  else if ((isP1 && m.aUp > 0) || (isP2 && m.aUp < 0)) { wins++ }
+                  else { losses++ }
+                })
+                const pts = wins + halves * 0.5
+                return { player: p, wins, halves, losses, pts }
+              }).sort((a, b) => b.pts - a.pts)
+
+              const anyFinished = threeBallMatches.some(m => m.finished || m.played === totalHoles)
+              if (!anyFinished) {
+                return (
+                  <div className="text-center py-8 text-slate-600 text-sm">
+                    <div className="text-3xl mb-2">⛳</div>
+                    Overall standings appear when matches are complete
+                  </div>
+                )
+              }
+
+              return (
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Overall Standings</div>
+                  <div className="space-y-2">
+                    {standings.map((s, i) => (
+                      <div
+                        key={s.player.id}
+                        className={`rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${
+                          i === 0 ? 'bg-amber-950/30 border-amber-700/40' :
+                          i === 1 ? 'bg-slate-800/40 border-slate-600/40' :
+                          'bg-slate-900 border-slate-800'
+                        }`}
+                      >
+                        <div className="w-9 text-center shrink-0">
+                          {i < 2
+                            ? <span className="text-xl">{MEDAL[i]}</span>
+                            : <span className="text-sm font-black text-slate-400">{i + 1}</span>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-black text-white text-sm truncate">{s.player.name}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {s.wins}W · {s.halves}H · {s.losses}L
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-2xl font-black text-emerald-400 leading-none">{s.pts}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">pts</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
         <p className="text-[10px] text-slate-700 text-center mt-5">
           {format === 'stableford' ? 'Higher points wins' :
            format === 'ryder_cup' ? 'Win=1pt · Halve=0.5pt · Lose=0pt per fourball' :
            format === 'team_stroke' ? 'Match: net score per hole · Stroke: combined net per pair' :
            format === 'scramble' ? 'Team HCP = 60% low + 40% high · lowest net wins' :
+           format === 'match_3ball' ? 'Net score per hole · 3 matches running simultaneously · Win=1pt · Halve=0.5pt' :
            isMatch ? 'Net score per hole · handicap from stroke index' :
            'Net = gross − playing handicap · lower wins'}
         </p>

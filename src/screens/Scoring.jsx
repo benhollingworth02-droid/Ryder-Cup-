@@ -3,7 +3,7 @@ import {
   getScore, holesPlayed, calcGross,
   getHolePar, getHoleSI, shotsReceived, stablefordPoints, calcPlayerStableford,
   calcHoleMatchResult, calcMatchStatus, matchStatusText,
-  getFourballGroupMatchStatus, buildRydercupResult,
+  getFourballGroupMatchStatus, buildRydercupResult, buildThreeBallResult,
 } from '../utils/scoring'
 
 const TEAM_COLOR = { 1: 'bg-blue-500', 2: 'bg-red-500' }
@@ -222,6 +222,11 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
     ? buildRydercupResult(scores, roundPlayers, players, courseHoles, round)
     : null
 
+  // 3-ball match play: 3 concurrent matches
+  const threeBallMatches = format === 'match_3ball'
+    ? buildThreeBallResult(scores, roundPlayers, players, courseHoles, totalHoles)
+    : null
+
   const enteredThisHole = displayedPlayers.filter(p => getScore(scores, p.id, holeNum) !== null).length
 
   return (
@@ -332,6 +337,28 @@ export default function Scoring({ round, players, roundPlayers, courseHoles, sco
             <span className="text-blue-400">{sideAName}</span>
             {' vs '}
             <span className="text-red-400">{sideBName}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 3-ball match status strip */}
+      {format === 'match_3ball' && threeBallMatches && threeBallMatches.length === 3 && (
+        <div className="mx-4 mt-3 bg-slate-900 rounded-2xl border border-slate-800 px-4 py-3">
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 text-center">3-Ball Matches</div>
+          <div className="space-y-1.5">
+            {threeBallMatches.map((m, i) => {
+              const n1 = m.player1.name.split(' ')[0]
+              const n2 = m.player2.name.split(' ')[0]
+              const statusTxt = matchStatusText(m, n1, n2)
+              return (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-bold">{n1} vs {n2}</span>
+                  <span className={`font-black ml-2 ${m.played === 0 ? 'text-slate-700' : m.aUp === 0 ? 'text-slate-400' : 'text-emerald-400'}`}>
+                    {statusTxt}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
