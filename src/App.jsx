@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   hasSupabase,
-  fetchPlayers, fetchRounds, fetchScores,
-  subscribePlayers, subscribeRounds, subscribeScores, unsubscribe,
-  upsertScore, deleteScore, deleteRound,
+  fetchPlayers, fetchRounds, fetchCourses, fetchScores, fetchRoundPlayers,
+  subscribePlayers, subscribeRounds, subscribeCourses, subscribeScores, subscribeRoundPlayers,
+  unsubscribe, upsertScore, deleteScore, deleteRound,
 } from './lib/supabase'
 import Home             from './screens/Home'
 import Players          from './screens/Players'
+import Courses          from './screens/Courses'
 import NewRound         from './screens/NewRound'
 import Scoring          from './screens/Scoring'
 import RoundLeaderboard from './screens/RoundLeaderboard'
@@ -18,16 +19,19 @@ export default function App() {
   const [screen, setScreen]           = useState('home')
   const [activeRound, setActiveRound] = useState(null)
 
-  // ── Shared data (from Supabase, synced live) ──────────────────────────────
-  const [players, setPlayers] = useState([])
-  const [rounds, setRounds]   = useState([])
-  const [scores, setScores]   = useState([])   // scores for activeRound only
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+  // ── Shared data ───────────────────────────────────────────────────────────
+  const [players, setPlayers]         = useState([])
+  const [rounds, setRounds]           = useState([])
+  const [courses, setCourses]         = useState([])
+  const [scores, setScores]           = useState([])
+  const [roundPlayers, setRoundPlayers] = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(null)
 
-  const scoreChannelRef = useRef(null)
+  const scoreChannelRef       = useRef(null)
+  const roundPlayerChannelRef = useRef(null)
 
-  // Load players + rounds on mount; subscribe to live changes
+  // Load players, rounds, courses on mount; subscribe to live changes
   useEffect(() => {
     if (!hasSupabase) {
       setError('Supabase not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel')
@@ -35,12 +39,14 @@ export default function App() {
       return
     }
 
-    Promise.all([fetchPlayers(), fetchRounds()])
-      .then(([pRes, rRes]) => {
+    Promise.all([fetchPlayers(), fetchRounds(), fetchCourses()])
+      .then(([pRes, rRes, cRes]) => {
         if (pRes.error) throw new Error(pRes.error?.message ?? String(pRes.error))
         if (rRes.error) throw new Error(rRes.error?.message ?? String(rRes.error))
+        if (cRes.error) throw new Error(cRes.error?.message ?? String(cRes.error))
         setPlayers(pRes.data ?? [])
         setRounds(rRes.data ?? [])
+        setCourses(cRes.data ?? [])
         setLoading(false)
       })
       .catch(e => { setError(e.message); setLoading(false) })
@@ -63,18 +69,36 @@ export default function App() {
         setRounds(prev => prev.filter(r => r.id !== payload.old.id))
     })
 
-    return () => { unsubscribe(ch1); unsubscribe(ch2) }
+    const ch3 = subscribeCourses(payload => {
+      if (payload.eventType === 'INSERT')
+        setCourses(prev => prev.some(c => c.id === payload.new.id) ? prev : [...prev, payload.new])
+      else if (payload.eventType === 'UPDATE')
+        setCourses(prev => prev.map(c => c.id === payload.new.id ? payload.new : c))
+      else if (payload.eventType === 'DELETE')
+        setCourses(prev => prev.filter(c => c.id !== payload.old.id))
+    })
+
+    return () => { unsubscribe(ch1); unsubscribe(ch2); unsubscribe(ch3) }
   }, [])
 
-  // Load + subscribe scores when activeRound changes
+  // Load + subscribe scores and round_players when activeRound changes
   useEffect(() => {
     if (scoreChannelRef.current) {
       unsubscribe(scoreChannelRef.current)
       scoreChannelRef.current = null
     }
-    if (!activeRound || !hasSupabase) { setScores([]); return }
+    if (roundPlayerChannelRef.current) {
+      unsubscribe(roundPlayerChannelRef.current)
+      roundPlayerChannelRef.current = null
+    }
+    if (!activeRound || !hasSupabase) {
+      setScores([])
+      setRoundPlayers([])
+      return
+    }
 
     fetchScores(activeRound.id).then(({ data }) => setScores(data ?? []))
+    fetchRoundPlayers(activeRound.id).then(({ data }) => setRoundPlayers(data ?? []))
 
     scoreChannelRef.current = subscribeScores(activeRound.id, payload => {
       if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -89,14 +113,23 @@ export default function App() {
       }
     })
 
+    roundPlayerChannelRef.current = subscribeRoundPlayers(activeRound.id, payload => {
+      if (payload.eventType === 'INSERT')
+        setRoundPlayers(prev => prev.some(r => r.id === payload.new.id) ? prev : [...prev, payload.new])
+      else if (payload.eventType === 'UPDATE')
+        setRoundPlayers(prev => prev.map(r => r.id === payload.new.id ? payload.new : r))
+      else if (payload.eventType === 'DELETE')
+        setRoundPlayers(prev => prev.filter(r => r.id !== payload.old.id))
+    })
+
     return () => {
       if (scoreChannelRef.current) { unsubscribe(scoreChannelRef.current); scoreChannelRef.current = null }
+      if (roundPlayerChannelRef.current) { unsubscribe(roundPlayerChannelRef.current); roundPlayerChannelRef.current = null }
     }
   }, [activeRound?.id])
 
   // ── Score mutations with optimistic updates ────────────────────────────────
   async function handleScoreChange(playerId, holeNumber, strokes) {
-    // Optimistic: update local state immediately for instant UI feedback
     setScores(prev => {
       const idx = prev.findIndex(s => s.player_id === playerId && s.hole_number === holeNumber)
       const entry = {
@@ -105,7 +138,6 @@ export default function App() {
       }
       return idx >= 0 ? prev.map((s, i) => i === idx ? entry : s) : [...prev, entry]
     })
-    // Persist — Realtime will come back and replace the optimistic entry with the real DB row
     await upsertScore(activeRound.id, playerId, holeNumber, strokes)
   }
 
@@ -120,12 +152,19 @@ export default function App() {
   function goHome()               { setScreen('home') }
 
   async function handleDeleteRound(round) {
-    if (!window.confirm(`Delete "${round.course}"? This removes all scores for this round and cannot be undone.`)) return
+    const courseName = courses.find(c => c.id === round.course_id)?.name ?? 'this round'
+    if (!window.confirm(`Delete "${courseName}"? This removes all scores and cannot be undone.`)) return
     setRounds(prev => prev.filter(r => r.id !== round.id))
     await deleteRound(round.id)
   }
 
-  // ── Loading / error states ─────────────────────────────────────────────────
+  // ── Derived data for active round ─────────────────────────────────────────
+  const activeCourse  = courses.find(c => c.id === activeRound?.course_id)
+  const courseHoles   = activeCourse?.holes ?? []
+  const activePlayerIds = new Set(roundPlayers.map(rp => rp.player_id))
+  const activePlayers = players.filter(p => activePlayerIds.has(p.id))
+
+  // ── Loading / error states ────────────────────────────────────────────────
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
       <div className="text-center text-gray-600">
@@ -145,7 +184,6 @@ export default function App() {
     </div>
   )
 
-  // Scoring, round leaderboard, and new round are full-screen (no bottom nav)
   const isFullScreen = screen === 'scoring' || screen === 'round-leaderboard' || screen === 'new-round'
 
   return (
@@ -154,7 +192,7 @@ export default function App() {
         <div className="pb-16">
           <Home
             rounds={rounds}
-            players={players}
+            courses={courses}
             onNewRound={() => setScreen('new-round')}
             onScoring={openScoring}
             onLeaderboard={openLeaderboard}
@@ -169,6 +207,12 @@ export default function App() {
         </div>
       )}
 
+      {screen === 'courses' && (
+        <div className="pb-16">
+          <Courses courses={courses} onCoursesChange={setCourses} />
+        </div>
+      )}
+
       {screen === 'trip-leaderboard' && (
         <div className="pb-16">
           <TripLeaderboard players={players} rounds={rounds} />
@@ -177,6 +221,8 @@ export default function App() {
 
       {screen === 'new-round' && (
         <NewRound
+          players={players}
+          courses={courses}
           onCreated={round => {
             setRounds(prev => [round, ...prev])
             openScoring(round)
@@ -188,7 +234,9 @@ export default function App() {
       {screen === 'scoring' && (
         <Scoring
           round={activeRound}
-          players={players}
+          players={activePlayers}
+          roundPlayers={roundPlayers}
+          courseHoles={courseHoles}
           scores={scores}
           onBack={goHome}
           onLeaderboard={() => openLeaderboard(activeRound)}
@@ -200,7 +248,10 @@ export default function App() {
       {screen === 'round-leaderboard' && (
         <RoundLeaderboard
           round={activeRound}
-          players={players}
+          players={activePlayers}
+          roundPlayers={roundPlayers}
+          courseHoles={courseHoles}
+          courses={courses}
           scores={scores}
           onBack={goHome}
           onScoring={() => openScoring(activeRound)}
@@ -212,6 +263,7 @@ export default function App() {
           screen={screen}
           onHome={goHome}
           onPlayers={() => setScreen('players')}
+          onCourses={() => setScreen('courses')}
           onLeaderboard={() => setScreen('trip-leaderboard')}
         />
       )}

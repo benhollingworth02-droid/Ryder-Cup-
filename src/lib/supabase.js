@@ -30,6 +30,28 @@ export async function deletePlayer(id) {
   return supabase.from('players').delete().eq('id', id)
 }
 
+// ── Courses ───────────────────────────────────────────────────────────────────
+
+export async function fetchCourses() {
+  if (!supabase) return { data: [], error: 'Not configured' }
+  return supabase.from('courses').select('*').order('name')
+}
+
+export async function createCourse(name, totalHoles, holes) {
+  if (!supabase) return { data: null, error: 'Not configured' }
+  return supabase.from('courses').insert({ name, total_holes: totalHoles, holes }).select().single()
+}
+
+export async function updateCourse(id, name, totalHoles, holes) {
+  if (!supabase) return { error: 'Not configured' }
+  return supabase.from('courses').update({ name, total_holes: totalHoles, holes }).eq('id', id).select().single()
+}
+
+export async function deleteCourse(id) {
+  if (!supabase) return { error: 'Not configured' }
+  return supabase.from('courses').delete().eq('id', id)
+}
+
 // ── Rounds ────────────────────────────────────────────────────────────────────
 
 export async function fetchRounds() {
@@ -37,14 +59,38 @@ export async function fetchRounds() {
   return supabase.from('rounds').select('*').order('date', { ascending: false })
 }
 
-export async function createRound(date, course, holes) {
+export async function createRound(date, courseId, format, holes) {
   if (!supabase) return { data: null, error: 'Not configured' }
-  return supabase.from('rounds').insert({ date, course, holes }).select().single()
+  return supabase.from('rounds').insert({ date, course_id: courseId, format, holes }).select().single()
 }
 
 export async function deleteRound(id) {
   if (!supabase) return { error: 'Not configured' }
   return supabase.from('rounds').delete().eq('id', id)
+}
+
+// ── Round Players ─────────────────────────────────────────────────────────────
+
+export async function fetchRoundPlayers(roundId) {
+  if (!supabase) return { data: [], error: 'Not configured' }
+  return supabase.from('round_players').select('*').eq('round_id', roundId)
+}
+
+export async function fetchAllRoundPlayers() {
+  if (!supabase) return { data: [], error: 'Not configured' }
+  return supabase.from('round_players').select('*')
+}
+
+export async function createRoundPlayers(roundId, players) {
+  // players = [{playerId, playingHandicap, team}]
+  if (!supabase) return { error: 'Not configured' }
+  const rows = players.map(p => ({
+    round_id: roundId,
+    player_id: p.playerId,
+    playing_handicap: p.playingHandicap,
+    team: p.team ?? null,
+  }))
+  return supabase.from('round_players').insert(rows)
 }
 
 // ── Scores ────────────────────────────────────────────────────────────────────
@@ -85,10 +131,26 @@ export function subscribePlayers(callback) {
     .subscribe()
 }
 
+export function subscribeCourses(callback) {
+  if (!supabase) return null
+  return supabase.channel('courses-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'courses' }, callback)
+    .subscribe()
+}
+
 export function subscribeRounds(callback) {
   if (!supabase) return null
   return supabase.channel('rounds-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds' }, callback)
+    .subscribe()
+}
+
+export function subscribeRoundPlayers(roundId, callback) {
+  if (!supabase) return null
+  return supabase.channel(`round-players-${roundId}`)
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'round_players', filter: `round_id=eq.${roundId}` },
+      callback)
     .subscribe()
 }
 

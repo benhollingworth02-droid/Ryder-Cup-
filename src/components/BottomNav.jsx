@@ -1,13 +1,15 @@
 const TABS = [
   { id: 'home',             icon: '⛳', label: 'Rounds'   },
   { id: 'players',         icon: '👤', label: 'Players'  },
+  { id: 'courses',         icon: '🏌️', label: 'Courses'  },
   { id: 'trip-leaderboard', icon: '🏆', label: 'Standings' },
 ]
 
-export default function BottomNav({ screen, onHome, onPlayers, onLeaderboard }) {
+export default function BottomNav({ screen, onHome, onPlayers, onCourses, onLeaderboard }) {
   const handlers = {
     'home':              onHome,
     'players':           onPlayers,
+    'courses':           onCourses,
     'trip-leaderboard':  onLeaderboard,
   }
 

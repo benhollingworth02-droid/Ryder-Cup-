@@ -1,10 +1,29 @@
+const FORMAT_LABELS = {
+  stroke:     'Stroke Play',
+  stableford: 'Stableford',
+  match_1v1:  'Match Play',
+  fourballs:  'Fourballs',
+}
+
+const FORMAT_COLORS = {
+  stroke:     'bg-blue-900/50 text-blue-300',
+  stableford: 'bg-purple-900/50 text-purple-300',
+  match_1v1:  'bg-orange-900/50 text-orange-300',
+  fourballs:  'bg-yellow-900/50 text-yellow-300',
+}
+
 function fmt(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short',
   })
 }
 
-function RoundCard({ round, onScoring, onLeaderboard, onDelete }) {
+function RoundCard({ round, courses, onScoring, onLeaderboard, onDelete }) {
+  const course = courses.find(c => c.id === round.course_id)
+  const courseName = course?.name ?? 'Unknown Course'
+  const formatLabel = FORMAT_LABELS[round.format] ?? 'Stroke Play'
+  const formatColor = FORMAT_COLORS[round.format] ?? FORMAT_COLORS.stroke
+
   return (
     <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-800 flex items-start gap-2">
@@ -12,8 +31,13 @@ function RoundCard({ round, onScoring, onLeaderboard, onDelete }) {
           <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-0.5">
             {fmt(round.date)}
           </div>
-          <div className="font-black text-white text-base leading-tight">{round.course}</div>
-          <div className="text-xs text-gray-600 mt-0.5">{round.holes} holes</div>
+          <div className="font-black text-white text-base leading-tight">{courseName}</div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${formatColor}`}>
+              {formatLabel}
+            </span>
+            <span className="text-[10px] text-gray-600">{round.holes} holes</span>
+          </div>
         </div>
         <button
           onClick={() => onDelete(round)}
@@ -41,11 +65,11 @@ function RoundCard({ round, onScoring, onLeaderboard, onDelete }) {
   )
 }
 
-export default function Home({ rounds, onNewRound, onScoring, onLeaderboard, onDeleteRound }) {
+export default function Home({ rounds, courses, onNewRound, onScoring, onLeaderboard, onDeleteRound }) {
   return (
     <div className="min-h-screen bg-gray-950 px-4 pb-6">
       <div className="bg-gradient-to-b from-gray-900 to-gray-950 -mx-4 px-4 pt-8 pb-6 mb-5 text-center">
-        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Golf Trip</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Golf Scorer</div>
         <h1 className="text-3xl font-black text-white">Rounds</h1>
       </div>
 
@@ -68,6 +92,7 @@ export default function Home({ rounds, onNewRound, onScoring, onLeaderboard, onD
             <RoundCard
               key={round.id}
               round={round}
+              courses={courses}
               onScoring={onScoring}
               onLeaderboard={onLeaderboard}
               onDelete={onDeleteRound}

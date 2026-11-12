@@ -1,42 +1,49 @@
 import { useState, useEffect } from 'react'
-import { fetchAllScores } from '../lib/supabase'
+import { fetchAllScores, fetchAllRoundPlayers } from '../lib/supabase'
 import { buildTripLeaderboard } from '../utils/scoring'
 
 const MEDAL = ['🥇', '🥈', '🥉']
 
 export default function TripLeaderboard({ players, rounds }) {
-  const [allScores, setAllScores] = useState([])
-  const [loading, setLoading]     = useState(true)
+  const [allScores, setAllScores]           = useState([])
+  const [allRoundPlayers, setAllRoundPlayers] = useState([])
+  const [loading, setLoading]               = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    fetchAllScores().then(({ data }) => {
-      setAllScores(data ?? [])
+    Promise.all([fetchAllScores(), fetchAllRoundPlayers()]).then(([sRes, rpRes]) => {
+      setAllScores(sRes.data ?? [])
+      setAllRoundPlayers(rpRes.data ?? [])
       setLoading(false)
     })
   }, [])
 
-  const leaderboard = buildTripLeaderboard(allScores, rounds, players)
-  const anyRoundsPlayed = leaderboard.some(e => e.roundsPlayed > 0)
+  const eligibleRounds = rounds.filter(r => r.format === 'stroke' || r.format === 'stableford' || !r.format)
+  const matchRounds    = rounds.filter(r => r.format === 'match_1v1' || r.format === 'fourballs')
+
+  const leaderboard    = buildTripLeaderboard(allScores, eligibleRounds, players, allRoundPlayers)
+  const anyPlayed      = leaderboard.some(e => e.roundsPlayed > 0)
 
   return (
     <div className="min-h-screen bg-gray-950 px-4 pb-6">
       <div className="bg-gradient-to-b from-gray-900 to-gray-950 -mx-4 px-4 pt-8 pb-6 mb-5 text-center">
-        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Golf Trip</div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Golf Scorer</div>
         <h1 className="text-3xl font-black text-white">Standings</h1>
         <div className="text-xs text-gray-600 mt-1.5">
-          {rounds.length} round{rounds.length !== 1 ? 's' : ''} · Total net score (lower wins)
+          {eligibleRounds.length} stroke/stableford round{eligibleRounds.length !== 1 ? 's' : ''}
+          {matchRounds.length > 0 && ` · ${matchRounds.length} match play round${matchRounds.length !== 1 ? 's' : ''} (excluded)`}
         </div>
       </div>
 
       {loading ? (
         <div className="text-center py-12 text-gray-600 text-sm">Loading…</div>
-      ) : rounds.length === 0 ? (
+      ) : eligibleRounds.length === 0 ? (
         <div className="text-center py-16 text-gray-700">
           <div className="text-4xl mb-3">🏆</div>
-          <p className="font-bold text-sm">No rounds played yet</p>
+          <p className="font-bold text-sm">No stroke/stableford rounds yet</p>
+          <p className="text-xs mt-1 text-gray-600">Standings aggregate stroke play and stableford rounds</p>
         </div>
-      ) : !anyRoundsPlayed ? (
+      ) : !anyPlayed ? (
         <div className="text-center py-12 text-gray-600 text-sm">No scores entered yet</div>
       ) : (
         <div className="space-y-2">
@@ -87,7 +94,7 @@ export default function TripLeaderboard({ players, rounds }) {
       )}
 
       <p className="text-[10px] text-gray-700 text-center mt-5">
-        Gross total − handicap per round · tallied across all rounds played
+        Total net across stroke play & stableford rounds · lower wins
       </p>
     </div>
   )

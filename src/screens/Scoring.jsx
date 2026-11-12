@@ -1,33 +1,48 @@
 import { useState, useRef } from 'react'
-import { getScore, holesPlayed } from '../utils/scoring'
+import {
+  getScore, holesPlayed, calcGross,
+  getHolePar, getHoleSI, shotsReceived, stablefordPoints, calcPlayerStableford,
+  calcHoleMatchResult, calcMatchStatus, matchStatusText,
+} from '../utils/scoring'
 
-function ScoreRow({ player, scores, holeNumber, onScoreChange, onScoreClear }) {
-  const score = getScore(scores, player.id, holeNumber)
+const TEAM_COLOR = { 1: 'bg-blue-500', 2: 'bg-red-500' }
+
+function ScoreRow({ player, scores, holeNumber, format, roundPlayer, courseHoles, onScoreChange, onScoreClear }) {
+  const score  = getScore(scores, player.id, holeNumber)
+  const si     = getHoleSI(courseHoles, holeNumber)
+  const par    = getHolePar(courseHoles, holeNumber)
+  const shots  = shotsReceived(si, roundPlayer?.playing_handicap ?? 0)
+  const isMatch = format === 'match_1v1' || format === 'fourballs'
 
   function adjust(delta) {
-    if (score === null) {
-      // First tap of either button → set to 4 (par-ish default)
-      onScoreChange(player.id, holeNumber, 4)
-      return
-    }
+    if (score === null) { onScoreChange(player.id, holeNumber, par); return }
     onScoreChange(player.id, holeNumber, Math.max(1, score + delta))
   }
 
+  const pts = format === 'stableford' ? stablefordPoints(score, par, shots) : null
+
   return (
     <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-800 last:border-0">
+      {isMatch && roundPlayer?.team && (
+        <div className={`w-2 h-2 rounded-full shrink-0 ${TEAM_COLOR[roundPlayer.team] ?? 'bg-gray-600'}`} />
+      )}
+
       <div className="flex-1 min-w-0 pr-1">
         <div className="font-bold text-white text-sm truncate leading-tight">{player.name}</div>
-        <div className="text-[10px] text-gray-600 leading-tight">HCP {player.handicap}</div>
+        <div className="text-[10px] text-gray-600 leading-tight flex items-center gap-1">
+          <span>HCP {roundPlayer?.playing_handicap ?? player.handicap}</span>
+          {shots > 0 && <span className="text-green-600">−{shots}</span>}
+        </div>
       </div>
 
       <button
         onClick={() => adjust(-1)}
-        className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
+        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
       >
         −
       </button>
 
-      <div className="w-11 text-center shrink-0">
+      <div className="w-10 text-center shrink-0">
         {score !== null ? (
           <button
             onClick={() => onScoreClear(player.id, holeNumber)}
@@ -43,18 +58,32 @@ function ScoreRow({ player, scores, holeNumber, onScoreChange, onScoreClear }) {
 
       <button
         onClick={() => adjust(+1)}
-        className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
+        className="w-11 h-11 rounded-xl bg-gray-800 border border-gray-700 text-white text-2xl font-bold flex items-center justify-center active:scale-90 active:bg-gray-700 shrink-0"
       >
         +
       </button>
+
+      {format === 'stableford' && (
+        <div className="w-10 text-center shrink-0">
+          {pts !== null ? (
+            <div className={`text-sm font-black leading-none ${pts >= 2 ? 'text-green-400' : pts === 1 ? 'text-yellow-400' : 'text-gray-600'}`}>
+              {pts}★
+            </div>
+          ) : (
+            <div className="text-sm text-gray-700">—</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-export default function Scoring({ round, players, scores, onBack, onLeaderboard, onScoreChange, onScoreClear }) {
+export default function Scoring({ round, players, roundPlayers, courseHoles, scores, onBack, onLeaderboard, onScoreChange, onScoreClear }) {
   const [holeNum, setHoleNum] = useState(1)
   const touchStart = useRef(null)
   const totalHoles = round?.holes ?? 18
+  const format     = round?.format ?? 'stroke'
+  const isMatch    = format === 'match_1v1' || format === 'fourballs'
 
   function prevHole() { setHoleNum(h => Math.max(1, h - 1)) }
   function nextHole() { setHoleNum(h => Math.min(totalHoles, h + 1)) }
@@ -73,6 +102,24 @@ export default function Scoring({ round, players, scores, onBack, onLeaderboard,
     weekday: 'short', day: 'numeric', month: 'short',
   })
 
+  // Build match status if applicable
+  const holeResults = isMatch
+    ? Array.from({ length: totalHoles }, (_, i) => calcHoleMatchResult(i + 1, scores, roundPlayers, courseHoles))
+    : null
+
+  const matchStatus = isMatch ? calcMatchStatus(holeResults, totalHoles) : null
+
+  const teamA = isMatch ? roundPlayers.filter(rp => rp.team === 1) : []
+  const teamB = isMatch ? roundPlayers.filter(rp => rp.team === 2) : []
+  const sideAName = format === 'match_1v1'
+    ? (players.find(p => p.id === teamA[0]?.player_id)?.name ?? 'Side A')
+    : 'Team A'
+  const sideBName = format === 'match_1v1'
+    ? (players.find(p => p.id === teamB[0]?.player_id)?.name ?? 'Side B')
+    : 'Team B'
+
+  const currentHoleResult = isMatch ? holeResults?.[holeNum - 1] : null
+
   const enteredThisHole = players.filter(p => getScore(scores, p.id, holeNum) !== null).length
 
   return (
@@ -88,8 +135,10 @@ export default function Scoring({ round, players, scores, onBack, onLeaderboard,
             ←
           </button>
           <div className="flex-1 min-w-0 text-center">
-            <div className="font-black text-white text-sm leading-tight truncate">{round.course}</div>
-            <div className="text-[10px] text-gray-500">{dateStr} · {totalHoles} holes</div>
+            <div className="font-black text-white text-sm leading-tight truncate">{round.course_name ?? dateStr}</div>
+            <div className="text-[10px] text-gray-500">
+              {dateStr} · {totalHoles} holes
+            </div>
           </div>
           <button
             onClick={onLeaderboard}
@@ -106,12 +155,15 @@ export default function Scoring({ round, players, scores, onBack, onLeaderboard,
             const entered = players.filter(p => getScore(scores, p.id, h) !== null).length
             const full    = entered === players.length && players.length > 0
             const partial = entered > 0 && !full
+            const result  = isMatch ? holeResults?.[h - 1] : null
+            const done    = isMatch ? result !== null : full
+            const partial2 = isMatch ? partial : partial
             return (
               <button
                 key={h}
                 onClick={() => setHoleNum(h)}
                 className={`shrink-0 w-9 h-9 rounded-xl text-xs font-black transition-all
-                  ${full ? 'bg-green-700 text-white' : partial ? 'bg-yellow-700/80 text-white' : 'bg-gray-800 text-gray-500'}
+                  ${done ? 'bg-green-700 text-white' : partial2 ? 'bg-yellow-700/80 text-white' : 'bg-gray-800 text-gray-500'}
                   ${h === holeNum ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-950 scale-110' : 'active:scale-95'}
                 `}
               >
@@ -121,6 +173,57 @@ export default function Scoring({ round, players, scores, onBack, onLeaderboard,
           })}
         </div>
       </div>
+
+      {/* Match status strip */}
+      {isMatch && matchStatus && (
+        <div className="mx-4 mt-3 bg-gray-900 rounded-2xl border border-gray-800 px-4 py-2.5 text-center">
+          <div className="text-sm font-black text-white">
+            {matchStatusText(matchStatus, sideAName, sideBName)}
+          </div>
+          <div className="text-[10px] text-gray-500 mt-0.5">
+            <span className="text-blue-400">{sideAName}</span>
+            {' vs '}
+            <span className="text-red-400">{sideBName}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Stableford totals strip */}
+      {format === 'stableford' && players.length > 0 && (
+        <div className="mx-4 mt-3 flex gap-1.5 flex-wrap">
+          {players.map(p => {
+            const rp = roundPlayers.find(r => r.player_id === p.id)
+            const pts = calcPlayerStableford(scores, p.id, courseHoles, rp)
+            return (
+              <div key={p.id} className="bg-gray-900 rounded-xl px-3 py-1.5 border border-gray-800">
+                <span className="text-xs text-gray-400">{p.name.split(' ')[0]}</span>
+                <span className="text-xs font-black text-green-400 ml-1.5">{pts}★</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Stroke totals strip */}
+      {format === 'stroke' && players.length > 0 && (
+        <div className="mx-4 mt-3 flex gap-1.5 flex-wrap">
+          {players.map(p => {
+            const rp     = roundPlayers.find(r => r.player_id === p.id)
+            const gross  = calcGross(scores, p.id)
+            const played = holesPlayed(scores, p.id)
+            const hcp    = rp?.playing_handicap ?? p.handicap
+            return (
+              <div key={p.id} className="bg-gray-900 rounded-xl px-3 py-1.5 border border-gray-800">
+                <span className="text-xs text-gray-400">{p.name.split(' ')[0]}</span>
+                {played > 0
+                  ? <span className="text-xs font-black text-green-400 ml-1.5">{gross - hcp}</span>
+                  : <span className="text-xs text-gray-700 ml-1.5">—</span>
+                }
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Hole navigation */}
       <div className="flex items-center gap-2 px-4 py-3">
@@ -133,7 +236,10 @@ export default function Scoring({ round, players, scores, onBack, onLeaderboard,
         </button>
         <div className="text-center px-2 shrink-0">
           <div className="text-3xl font-black text-white leading-none">Hole {holeNum}</div>
-          <div className="text-xs text-gray-600 mt-1">{enteredThisHole}/{players.length} entered</div>
+          <div className="text-xs text-gray-600 mt-1">
+            Par {getHolePar(courseHoles, holeNum)} · SI {getHoleSI(courseHoles, holeNum)}
+          </div>
+          <div className="text-[10px] text-gray-700 mt-0.5">{enteredThisHole}/{players.length} entered</div>
         </div>
         <button
           onClick={nextHole}
@@ -147,25 +253,52 @@ export default function Scoring({ round, players, scores, onBack, onLeaderboard,
       {/* Player score rows */}
       {players.length === 0 ? (
         <div className="text-center py-12 text-gray-600 text-sm px-4">
-          No players set up yet.{' '}
-          <span className="text-gray-500">Go to Players tab to add the group.</span>
+          No players assigned to this round.
         </div>
       ) : (
         <div className="mx-4 bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-          {players.map(player => (
-            <ScoreRow
-              key={player.id}
-              player={player}
-              scores={scores}
-              holeNumber={holeNum}
-              onScoreChange={onScoreChange}
-              onScoreClear={onScoreClear}
-            />
-          ))}
+          {players.map(player => {
+            const rp = roundPlayers.find(r => r.player_id === player.id)
+            return (
+              <ScoreRow
+                key={player.id}
+                player={player}
+                scores={scores}
+                holeNumber={holeNum}
+                format={format}
+                roundPlayer={rp}
+                courseHoles={courseHoles}
+                onScoreChange={onScoreChange}
+                onScoreClear={onScoreClear}
+              />
+            )
+          })}
         </div>
       )}
 
-      <div className="px-4 pt-3 pb-6">
+      {/* Match hole result chip */}
+      {isMatch && (
+        <div className="mx-4 mt-2 py-2 text-center">
+          {currentHoleResult === null && (
+            <span className="text-xs text-gray-700">Hole {holeNum} — awaiting scores</span>
+          )}
+          {currentHoleResult === 'halved' && (
+            <span className="text-xs font-black text-gray-400 bg-gray-800 px-3 py-1 rounded-full">Hole {holeNum} — Halved</span>
+          )}
+          {currentHoleResult === 'a' && (
+            <span className="text-xs font-black text-blue-300 bg-blue-900/40 px-3 py-1 rounded-full border border-blue-700/40">
+              Hole {holeNum} — {sideAName} wins
+            </span>
+          )}
+          {currentHoleResult === 'b' && (
+            <span className="text-xs font-black text-red-300 bg-red-900/40 px-3 py-1 rounded-full border border-red-700/40">
+              Hole {holeNum} — {sideBName} wins
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="px-4 pt-2 pb-6">
         <p className="text-[10px] text-gray-700 text-center">
           Tap a score to clear it · Swipe to change hole
         </p>
